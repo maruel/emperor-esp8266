@@ -77,15 +77,16 @@ int PinTone::set(int freq, int duration) {
   return freq_;
 }
 
-void PinInNode::update() {
+bool PinInNode::update() {
   debouncer_.update();
   if (debouncer_.rose()) {
-    setProperty("on").send("true");
-    onSet_(true);
+    broadcast(true);
+    return true;
   } else if (debouncer_.fell()) {
-    setProperty("on").send("false");
-    onSet_(false);
+    broadcast(false);
+    return true;
   }
+  return false;
 }
 
 bool PinOutNode::_onPropSet(const String &value) {

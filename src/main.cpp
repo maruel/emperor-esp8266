@@ -10,31 +10,31 @@
 //
 // Interfere with boot:
 // - RST -> button
-// - D3 (GPIO0) HIGH normal, LOW flash via UART; 10kOhm Pull Up
-// - TX (GPIO1) Out
-// - D4 (GPIO2) Out; Pulled HIGH; Drives on board LED; 10kOhm Pull Up
+// - D3 (GPIO0) HIGH normal, LOW flash via UART; 10kOhm Pull Up; On startup 26MHz for 50ms
+// - TX (GPIO1) Out; On startup binary output for 20ms
+// - D4 (GPIO2) Out; Pulled HIGH; Drives on board LED; 10kOhm Pull Up; On startup 600ms low with 20ms of 25kHz
 // - RX (GPIO3) In
-// - D8 (GPIO15) In; LOW normal; HIGH boot to SDIO; 10kOhm Pull Down
+// - D8 (GPIO15) In; LOW normal; HIGH boot to SDIO; 10kOhm Pull Down; On startup 200ms at 0.7V
 // - D0 (GPIO16) In; pulse signal to RST to wake up from wifi
 
 // Left:
-// - TX (GPIO1)
-// - RX (GPIO3) Button Seat Up
-// - D1 (GPIO5) Button Seat Down
-// - D2 (GPIO4) Button Monitor Up
-// - D3 (GPIO0) Button Monitor Down
-// - D4 (GPIO2) LED Output
+// - TX (GPIO1) Idles High
+// - RX (GPIO3) Idles High; Button Seat Up
+// - D1 (GPIO5) Idles High; Button Seat Down
+// - D2 (GPIO4) Idles High; Button Monitor Up
+// - D3 (GPIO0) Idles High; Button Monitor Down
+// - D4 (GPIO2) LED Output; Low when LED on
 // - GND
 // - 5V
 
 // Right:
 // - RST button
 // - A0 void
-// - D0 (GPIO16) Button LED
-// - D5 (GPIO14) Motor Seat Down
-// - D6 (GPIO12) Motor Monitor Up
-// - D7 (GPIO13) Motor Monitor Down
-// - D8 (GPIO15) Motor Seat Up
+// - D0 (GPIO16) Idles High; Button LED
+// - D5 (GPIO14) Idles High; Actuator Seat Down 
+// - D6 (GPIO12) Idles High; Actuator Monitor Up
+// - D7 (GPIO13) Idles High; Actuator Monitor Down
+// - D8 (GPIO15) Idles Low ; Actuator Seat Up
 // - 3v3
 
 
@@ -50,43 +50,47 @@
 // Enable debugging.
 //#define LOG_SERIAL
 
-const int BUTTON_SEAT_UP = RX;      // GPIO3 (UART)
-const int BUTTON_SEAT_DOWN = D1;    // GPIO5
-const int BUTTON_MONITOR_UP = D2;   // GPIO4
-const int BUTTON_MONITOR_DOWN = D3; // GPIO0 (Boot mode) (Pull Up)
-const int BUTTON_LED = D0;          // GPIO16 (Pulse to wake up)
-const int MOTOR_SEAT_UP = D5;       // GPIO14
-const int MOTOR_SEAT_DOWN = D6;     // GPIO12
-const int MOTOR_MONITOR_UP = D7;    // GPIO13
-const int MOTOR_MONITOR_DOWN = D8;  // GPIO15 (Pull Down)
+const int BUTTON_SEAT_UP = RX;      // GPIO3; Idles High (UART)
+const int BUTTON_SEAT_DOWN = D1;    // GPIO5; Idles High
+const int BUTTON_MONITOR_UP = D2;   // GPIO4; Idles High
+const int BUTTON_MONITOR_DOWN = D3; // GPIO0; Idles High (Boot mode) (Pull Up)
+const int BUTTON_LED = D0;          // GPIO16; Idles Low (Pulse to wake up)
+const int MOTOR_SEAT_UP = D5;       // GPIO14; Idles High
+const int MOTOR_SEAT_DOWN = D6;     // GPIO12; Idles High
+const int MOTOR_MONITOR_UP = D7;    // GPIO13; Idles High
+const int MOTOR_MONITOR_DOWN = D8;  // GPIO15; Pull Down
 const int LED_OUT = D4;             // GPIO2 (Pull Up; Also onboard LED)
 
-enum Direction {
-  STOP = 0,
-  UP = 1,
-  DOWN = 2,
-};
-
-const char *dirToStr(Direction d) {
-  switch (d) {
-  case STOP:
-    return "STOP";
-  case UP:
-    return "UP";
-  case DOWN:
-    return "DOWN";
-  default:
-    return "<INVALID DIRECTION>";
-  }
-}
-
-// Homie node to control a bidirectional motor.
+// Homie node to control a bidirectional actuator.
 //
-// Idles HIGH.
-class Motor : public HomieNode {
+// Unlike a normal motor, the actuator can only run each way for a certain
+// amount of time, as it eventually is fully extended or retracted.
+// 
+// Each relay output can idle on different values, depending on the GPIO used.
+class Actuator : public HomieNode {
 public:
-  Motor(const char *name, int left, int right)
-      : HomieNode(name, "motor"), left_(left, true), right_(right, true) {
+  enum Direction {
+    STOP = 0,
+    UP = 1,
+    DOWN = 2,
+  };
+
+  static const char *dirToStr(Direction d) {
+    switch (d) {
+    case STOP:
+      return "STOP";
+    case UP:
+      return "UP";
+    case DOWN:
+      return "DOWN";
+    default:
+      return "<INVALID DIRECTION>";
+    }
+  }
+
+  Actuator(const char *name, int left, bool idleleft, int right, bool idleright)
+      : HomieNode(name, "motor"), idleleft_(idleleft), idleright_(idleright),
+        left_(left, idleleft), right_(right, idleright) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {
           if (value.equalsIgnoreCase("STOP")) {
@@ -107,28 +111,27 @@ public:
     setProperty("direction").send("STOP");
   }
 
-  // Idles high.
   void motor(Direction d) {
     Homie.getLogger() << dirToStr(d) << endl;
     switch (d) {
     default:
     case STOP:
-      set(true, true);
+      set(idleleft_, idleright_);
       break;
     case UP:
       // If we were not in STOP, stops instead. This is safer.
       if (left_.get() != right_.get()) {
-        set(true, true);
+        set(idleleft_, idleright_);
       } else {
-        set(true, false);
+        set(!idleleft_, idleright_);
       }
       break;
     case DOWN:
       // If we were not in STOP, stops instead. This is safer.
       if (left_.get() != right_.get()) {
-        set(true, true);
+        set(idleleft_, idleright_);
       } else {
-        set(false, true);
+        set(idleleft_, !idleright_);
       }
       break;
     }
@@ -140,6 +143,8 @@ private:
     right_.set(v_right);
   }
 
+  const bool idleleft_;
+  const bool idleright_;
   PinOut left_;
   PinOut right_;
 };
@@ -150,56 +155,61 @@ private:
 
 // Outputs.
 PinOutNode LED("led", LED_OUT, true);
-Motor Seat("seat", MOTOR_SEAT_UP, MOTOR_SEAT_DOWN);
-Motor Monitors("monitors", MOTOR_MONITOR_UP, MOTOR_MONITOR_DOWN);
+Actuator Seat("seat", MOTOR_SEAT_UP, true, MOTOR_SEAT_DOWN, true);
+Actuator Monitors("monitors", MOTOR_MONITOR_UP, true, MOTOR_MONITOR_DOWN, false);
 
-// Inputs.
+// Inputs. All of them idles High, so they are active when Low.
 PinInNode buttonMonitorUp(
     "button_monitor_up",
     [](bool v) {
       if (v) {
-        Monitors.motor(UP);
-      } else {
-        Monitors.motor(STOP);
-	    }
+        Monitors.motor(Actuator::STOP);
+        return;
+      }
+      Monitors.motor(Actuator::UP);
     },
-    BUTTON_MONITOR_UP);
+    BUTTON_MONITOR_UP,
+    true);
 PinInNode buttonMonitorDown(
     "button_monitor_down",
     [](bool v) {
       if (v) {
-        Monitors.motor(DOWN);
-      } else {
-        Monitors.motor(STOP);
+        Monitors.motor(Actuator::STOP);
+        return;
       }
+      Monitors.motor(Actuator::DOWN);
     },
-    BUTTON_MONITOR_DOWN);
+    BUTTON_MONITOR_DOWN,
+    true);
 PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
       if (v) {
-        Seat.motor(UP);
-      } else {
-        Seat.motor(STOP);
+        Monitors.motor(Actuator::STOP);
+        return;
       }
+      Seat.motor(Actuator::UP);
     },
-    BUTTON_SEAT_UP);
+    BUTTON_SEAT_UP,
+    true);
 PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
       if (v) {
-        Seat.motor(DOWN);
-      } else {
-        Seat.motor(STOP);
+        Monitors.motor(Actuator::STOP);
+        return;
       }
+      Seat.motor(Actuator::DOWN);
     },
-    BUTTON_SEAT_DOWN);
+    BUTTON_SEAT_DOWN,
+    true);
 PinInNode buttonLED(
     "button_led",
     [](bool v) {
       LED.set(v);
     },
-    BUTTON_SEAT_DOWN);
+    BUTTON_LED,
+    false);
 
 
 #if defined(USE_WEB_SERVER)
@@ -214,8 +224,9 @@ void onHomieEvent(const HomieEvent& event) {
   switch(event.type) {
     case HomieEventType::OTA_STARTED:
     case HomieEventType::ABOUT_TO_RESET:
-      Seat.motor(STOP);
-      Monitors.motor(STOP);
+      // Make sure to stop the actuators on OTA.
+      Seat.motor(Actuator::STOP);
+      Monitors.motor(Actuator::STOP);
       break;
     case HomieEventType::MQTT_READY:
       // Reset the actual LEDs.
@@ -236,6 +247,10 @@ void setup() {
   Serial.setDebugOutput(false);
   Homie.disableLogging();
 #endif
+
+  // TODO(maruel): Disable and emulate the feedback ourselves so we can reset it
+  // when it makes sense.
+  //Homie.disableLedFeedback();
 
   // There's no pin available.
   Homie.disableResetTrigger();

@@ -32,7 +32,6 @@ public:
 private:
   bool value_;
 
-private:
   DISALLOW_COPY_AND_ASSIGN(PinOut);
 };
 
@@ -52,7 +51,6 @@ public:
 private:
   int value_;
 
-private:
   DISALLOW_COPY_AND_ASSIGN(PinPWM);
 };
 
@@ -72,7 +70,6 @@ public:
 private:
   int freq_;
 
-private:
   DISALLOW_COPY_AND_ASSIGN(PinTone);
 };
 
@@ -82,28 +79,42 @@ private:
 
 // Homie node representing an input pin.
 //
-// Uses a debouncer with a 50ms delay.
+// onSet is called with true being the non-idle value. So if idle is true, the
+// value sent to onSet() are reversed.
+//
+// Uses a debouncer with a 25ms delay.
 class PinInNode : public HomieNode {
 public:
   explicit PinInNode(const char *name, void (*onSet)(bool v), int pin,
-                     int mode = INPUT_PULLUP, int interval = 50)
-      : HomieNode(name, "input"), onSet_(onSet) {
-    debouncer_.attach(pin, mode);
-    debouncer_.interval(interval);
+                     bool idle)
+      : HomieNode(name, "input"), onSet_(onSet), idle_(idle) {
+    if (idle) {
+      debouncer_.attach(pin, INPUT_PULLUP);
+    } else {
+      debouncer_.attach(pin, INPUT);
+    }
+    debouncer_.interval(25);
     advertise("on");
-    setProperty("on").send("false");
+    if (!update()) {
+      broadcast(debouncer_.read());
+    }
   }
 
-  void update();
+  bool update();
   bool get() {
     return debouncer_.read();
   }
 
 private:
+  void broadcast(bool level) {
+    setProperty("on").send(idle_ != level ? "true" : "false");
+    onSet_(idle_ != level);
+  }
+
   void (*const onSet_)(bool v);
   Bounce debouncer_;
+  const bool idle_;
 
-private:
   DISALLOW_COPY_AND_ASSIGN(PinInNode);
 };
 
@@ -128,14 +139,12 @@ public:
     return pin_.get();
   }
 
-protected:
+private:
   bool _onPropSet(const String &value);
 
-private:
   void (*const onSet_)(bool v);
   PinOut pin_;
 
-private:
   DISALLOW_COPY_AND_ASSIGN(PinOutNode);
 };
 
@@ -160,14 +169,12 @@ public:
     return pin_.get();
   }
 
-protected:
+private:
   bool _onPropSet(const String &value);
 
-private:
   void (*const onSet_)(int v);
   PinPWM pin_;
 
-private:
   DISALLOW_COPY_AND_ASSIGN(PinPWMNode);
 };
 
@@ -192,13 +199,11 @@ public:
     return pin_.get();
   }
 
-protected:
+private:
   bool _onPropSet(const String &value);
 
-private:
   void (*const onSet_)(int v);
   PinTone pin_;
 
-private:
   DISALLOW_COPY_AND_ASSIGN(PinToneNode);
 };
