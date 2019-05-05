@@ -124,6 +124,9 @@ public:
           setProperty("direction").send("stop");
           return true;
         });
+  }
+
+  void init() {
     setProperty("direction").send("stop");
   }
 
@@ -172,7 +175,6 @@ PinOutNode LED("led", LED_OUT, true, NULL);
 Actuator Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true);
 Actuator Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true);
 
-/*
 // Inputs. All of them idles High, so they are active when Low.
 PinInNode buttonMonitorUp(
     "button_monitor_up",
@@ -225,7 +227,6 @@ PinInNode buttonLED(
     },
     BUTTON_LED,
     false);
-*/
 
 #if defined(USE_WEB_SERVER)
 // Web server to serve the MQTT web UI. This is NOT the web server when in
@@ -245,7 +246,7 @@ void onHomieEvent(const HomieEvent& event) {
       break;
     case HomieEventType::MQTT_READY:
       // Reset the actual LEDs.
-      //LED.set(buttonLED.get());
+      // LED.set(buttonLED.get());
       break;
     default:
       break;
@@ -287,6 +288,15 @@ void setup() {
   Homie.onEvent(onHomieEvent);
   Homie.setup();
 
+  LED.init();
+  Seat.init();
+  Monitors.init();
+  buttonMonitorUp.init();
+  buttonMonitorDown.init();
+  buttonSeatUp.init();
+  buttonSeatDown.init();
+  buttonLED.init();
+
 #if defined(USE_WEB_SERVER)
   if (Homie.isConfigured()) {
     httpSrv.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -315,11 +325,9 @@ void setup() {
 
 void loop() {
   Homie.loop();
-  /*
   buttonMonitorUp.update();
   buttonMonitorDown.update();
   buttonSeatUp.update();
   buttonSeatDown.update();
   buttonLED.update();
-  */
 }

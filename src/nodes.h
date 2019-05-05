@@ -77,9 +77,9 @@ private:
 // Wrapper for a PWM output pin.
 class PinPWM {
 public:
-  explicit PinPWM(int pin, int level = 0) : pin(pin) {
+  explicit PinPWM(int pin) : pin(pin) {
     pinMode(pin, OUTPUT);
-    set(level);
+    set(0);
   }
 
   int set(int v);
@@ -96,12 +96,13 @@ private:
 // Wrapper for a PWM pin meant to be used as a buzzer using the tone() function.
 class PinTone {
 public:
-  explicit PinTone(int pin, int freq = 0) : pin(pin) {
+  explicit PinTone(int pin) : pin(pin) {
     pinMode(pin, OUTPUT);
-    set(freq);
+    set(0, -1);
   }
 
-  int set(int freq, int duration = -1);
+  // Use -1 for duration for infinite duration.
+  int set(int freq, int duration);
   int get() { return freq_; }
 
   const int pin;
@@ -128,6 +129,9 @@ public:
                      bool idle)
       : HomieNode(name, "input"), onSet_(onSet), pin_(pin, idle) {
     advertise("on");
+  }
+
+  void init() {
     broadcast();
   }
 
@@ -172,6 +176,9 @@ public:
         [&](const HomieRange &range, const String &value) {
           return _onPropSet(value);
         });
+  }
+
+  void init() {
     setProperty("on").send("false");
   }
 
@@ -198,16 +205,21 @@ private:
 };
 
 // Homie node representing a PWM output.
+//
+// For most pins idle should be true since most pins have a pull up.
 class PinPWMNode : public HomieNode {
 public:
-  explicit PinPWMNode(const char *name, int pin, int level = 0,
-                      void (*onSet)(int v) = NULL)
-      : HomieNode(name, "pwm"), onSet_(onSet), pin_(pin, level) {
+  explicit PinPWMNode(const char *name, int pin,
+                      void (*onSet)(int v))
+      : HomieNode(name, "pwm"), onSet_(onSet), pin_(pin) {
     advertise("pwm").settable(
         [&](const HomieRange &range, const String &value) {
           return this->_onPropSet(value);
         });
-    set(level);
+  }
+
+  void init() {
+    setProperty("pwm").send("0");
   }
 
   void set(int level) {
@@ -230,18 +242,21 @@ private:
 // Homie node representing a buzzer output.
 class PinToneNode : public HomieNode {
 public:
-  explicit PinToneNode(const char *name, int pin, int freq = 0,
-                      void (*onSet)(int v) = NULL)
-      : HomieNode(name, "freq"), onSet_(onSet), pin_(pin, freq) {
+  explicit PinToneNode(const char *name, int pin,
+                      void (*onSet)(int v))
+      : HomieNode(name, "freq"), onSet_(onSet), pin_(pin) {
     advertise("freq").settable(
         [&](const HomieRange &range, const String &value) {
           return this->_onPropSet(value);
         });
-    set(freq);
+  }
+
+  void init() {
+    setProperty("freq").send("0");
   }
 
   void set(int freq) {
-    setProperty("freq").send(String(pin_.set(freq)));
+    setProperty("freq").send(String(pin_.set(freq, -1)));
   }
 
   int get() {
