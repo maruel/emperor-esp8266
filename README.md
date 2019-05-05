@@ -239,12 +239,17 @@ for more details.
 Homie allows OTA via MQTT:
 
 ```
-git clone https://github.com/homieiot/homie-esp8266
-python homie-esp8266/scripts/ota_updater/ota_updater.py -l <host> -p 1883 -u <user> -d <password> -i emperor path/to/emperor-esp8266/.pioenvs/d1_mini/firmware.bin
+./do.py --log-serial mqtt -H <host>
 ```
 
 Warning: for an unknown reason, OTA doesn't work if the device was flashed over
 Serial and not rebooted since then. Make sure to reset the device in-between.
+
+But you can still use serial for debugging while doing OTA over wifi:
+
+```
+platformio serialports monitor --baud 115200
+```
 
 
 ## Contributing

@@ -77,33 +77,41 @@ int PinTone::set(int freq, int duration) {
   return freq_;
 }
 
+// Homie nodes.
+
 bool PinOutNode::_onPropSet(const String &value) {
+  Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
   int v = isBool(value);
   if (v == -1) {
-    Homie.getLogger() << getId() << ": Bad value: " << value << endl;
+    Homie.getLogger() << "  bad value" << endl;
     return false;
   }
   pin_.set(v != 0);
   if (onSet_ != NULL) {
     onSet_(v);
   }
+  setProperty("on").send(value);
   return true;
 }
 
 bool PinPWMNode::_onPropSet(const String &value) {
+  Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
   int v = toInt(value, 0, PWMRANGE);
   set(v);
   if (onSet_ != NULL) {
     onSet_(v);
   }
+  setProperty("pwm").send(value);
   return true;
 }
 
 bool PinToneNode::_onPropSet(const String &value) {
+  Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
   int v = toInt(value, 0, 20000);
   set(v);
   if (onSet_ != NULL) {
     onSet_(v);
   }
+  setProperty("freq").send(value);
   return true;
 }

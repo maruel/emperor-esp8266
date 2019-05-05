@@ -100,22 +100,24 @@ public:
           // If we get an action and we were not idle, go idle. This is to
           // prevent quick back and forth, which would be harsh on the actuator.
           // Better be safe than sorry.
-          if (value.equals("stop")) {
-            set_relays(false, false);
-            return true;
-          }
-          if (left_.get() != right_.get()) {
+          if (left_.get() == right_.get()) {
             if (value.equals("up")) {
               set_relays(true, false);
+              setProperty("direction").send(value);
               return true;
             }
             if (value.equals("down")) {
               set_relays(false, true);
+              setProperty("direction").send(value);
               return true;
             }
             // Ignore bad values and reset to stop. So sending garbagge still
             // stops the actuator.
-            Homie.getLogger() << getId() << ": Bad value: " << value << endl;
+            if (!value.equals("stop")) {
+              Homie.getLogger() << "  bad value" << endl;
+            }
+          } else if (!value.equals("stop")) {
+            Homie.getLogger() << "  value ignored due to different pin values" << endl;
           }
           set_relays(false, false);
           setProperty("direction").send("stop");
@@ -131,24 +133,19 @@ public:
 
   void set(Direction d) {
     Homie.getLogger() << "to_mqtt(" << getId() << ", " << dirToStr(d) << ")" << endl;
-    switch (d) {
-    default:
-    case STOP:
-      break;
-    case UP:
-      if (left_.get() == right_.get()) {
+    if (left_.get() == right_.get()) {
+      if (d == UP) {
         set_relays(true, false);
         setProperty("direction").send("up");
         return;
       }
-      break;
-    case DOWN:
-      if (left_.get() == right_.get()) {
+      if (d == DOWN) {
         set_relays(false, true);
         setProperty("direction").send("down");
         return;
       }
-      break;
+    } else if (d != STOP) {
+      Homie.getLogger() << "  value ignored due to different pin values" << endl;
     }
     set_relays(false, false);
     setProperty("direction").send("stop");

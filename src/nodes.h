@@ -180,7 +180,6 @@ public:
       : HomieNode(name, "output"), onSet_(onSet), pin_(pin, idle) {
     advertise("on").settable(
         [&](const HomieRange &range, const String &value) {
-          Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
           return _onPropSet(value);
         });
     // datatype = "boolean"
@@ -221,8 +220,7 @@ public:
       : HomieNode(name, "pwm"), onSet_(onSet), pin_(pin) {
     advertise("pwm").settable(
         [&](const HomieRange &range, const String &value) {
-        Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
-          return this->_onPropSet(value);
+          return _onPropSet(value);
         });
     // datatype = "integer"
     // format = 0:PWMRANGE
@@ -263,8 +261,7 @@ public:
       : HomieNode(name, "freq"), onSet_(onSet), pin_(pin) {
     advertise("freq").settable(
         [&](const HomieRange &range, const String &value) {
-        Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
-          return this->_onPropSet(value);
+          return _onPropSet(value);
         });
     // datatype = "integer"
     // format = 0:20000
