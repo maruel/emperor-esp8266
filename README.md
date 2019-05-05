@@ -178,6 +178,7 @@ protocol mqtt
 listener 9001
 protocol websockets
 EOF
+sudo mosquitto_passwd /etc/mosquitto/passwd homie
 sudo systemctl restart mosquitto
 ```
 

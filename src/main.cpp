@@ -21,7 +21,7 @@
 // - TX (GPIO1) Idles High
 // - RX (GPIO3) Idles High; Button Seat Up
 // - D1 (GPIO5) Idles High; Button Seat Down
-// - D2 (GPIO4) Idles High; Button Monitor Up
+// - D2 (GPIO4) Idles High; Actuator Monitor Down
 // - D3 (GPIO0) Idles High; Button Monitor Down
 // - D4 (GPIO2) LED Output; Low when LED on
 // - GND
@@ -31,10 +31,10 @@
 // - RST button
 // - A0 void
 // - D0 (GPIO16) Idles High; Button LED
-// - D5 (GPIO14) Idles High; Actuator Seat Down 
-// - D6 (GPIO12) Idles High; Actuator Monitor Up
-// - D7 (GPIO13) Idles High; Actuator Monitor Down
-// - D8 (GPIO15) Idles Low ; Actuator Seat Up TODO(maruel): Exchange with D1.
+// - D5 (GPIO14) Idles High; Actuator Seat Up
+// - D6 (GPIO12) Idles High; Actuator Seat Down
+// - D7 (GPIO13) Idles High; Actuator Monitor Up
+// - D8 (GPIO15) Idles Low ; Button Monitor Up
 // - 3v3
 
 
@@ -48,23 +48,26 @@
 #define USE_WEB_SERVER 1
 
 // Enable debugging.
-//#define LOG_SERIAL
+#define LOG_SERIAL 1
 
-const int BUTTON_SEAT_UP = RX;      // GPIO3; Idles High (UART)
-const int BUTTON_SEAT_DOWN = D1;    // GPIO5; Idles High
-const int BUTTON_MONITOR_UP = D2;   // GPIO4; Idles High
-const int BUTTON_MONITOR_DOWN = D3; // GPIO0; Idles High (Boot mode) (Pull Up)
-const int BUTTON_LED = D0;          // GPIO16; Idles Low (Pulse to wake up)
-const int MOTOR_SEAT_UP = D5;       // GPIO14; Idles High
-const int MOTOR_SEAT_DOWN = D6;     // GPIO12; Idles High
-const int MOTOR_MONITOR_UP = D7;    // GPIO13; Idles High
-const int MOTOR_MONITOR_DOWN = D8;  // GPIO15; Pull Down
-const int LED_OUT = D4;             // GPIO2 (Pull Up; Also onboard LED)
+
+const int BUTTON_SEAT_UP = RX;        // GPIO3 ; Idles High (UART)
+const int BUTTON_SEAT_DOWN = D1;      // GPIO5 ; Idles High
+const int BUTTON_MONITOR_UP = D8;     // GPIO15; Idles Low
+const int BUTTON_MONITOR_DOWN = D3;   // GPIO0 ; Pull Up (Boot mode)
+const int BUTTON_LED = D0;            // GPIO16; Idles Low (Pulse to wake up)
+const int ACTUATOR_SEAT_UP = D5;      // GPIO14; Idles High
+const int ACTUATOR_SEAT_DOWN = D6;    // GPIO12; Idles High
+const int ACTUATOR_MONITOR_UP = D7;   // GPIO13; Idles High
+const int ACTUATOR_MONITOR_DOWN = D2; // GPIO4 ; Idles High
+const int LED_OUT = D4;               // GPIO2 ; Pull Up; Also onboard LED
 
 // Homie node to control a bidirectional actuator.
 //
 // Unlike a normal motor, the actuator can only run each way for a certain
 // amount of time, as it eventually is fully extended or retracted.
+//
+// See https://en.wikipedia.org/wiki/Actuator
 // 
 // Each relay output can idle on different values, depending on the GPIO used.
 class Actuator : public HomieNode {
@@ -89,7 +92,7 @@ public:
   }
 
   Actuator(const char *name, int left, bool idleleft, int right, bool idleright)
-      : HomieNode(name, "motor"), idleleft_(idleleft), idleright_(idleright),
+      : HomieNode(name, "actuator"), idleleft_(idleleft), idleright_(idleright),
         left_(left, idleleft), right_(right, idleright) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {
@@ -154,8 +157,8 @@ private:
 
 // Outputs.
 PinOutNode LED("led", LED_OUT, true, NULL);
-Actuator Seat("seat", MOTOR_SEAT_UP, true, MOTOR_SEAT_DOWN, true);
-Actuator Monitors("monitors", MOTOR_MONITOR_UP, true, MOTOR_MONITOR_DOWN, false);
+Actuator Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true);
+Actuator Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true);
 
 // Inputs. All of them idles High, so they are active when Low.
 PinInNode buttonMonitorUp(

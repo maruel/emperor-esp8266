@@ -8,6 +8,8 @@ import os
 import subprocess
 import sys
 
+DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 def flash_serial(spiffs):
   if spiffs:
@@ -30,6 +32,7 @@ def flash_serial(spiffs):
 
 
 def main():
+  os.chdir(DIR)
   parser = argparse.ArgumentParser()
   # TODO(maruel): Make it two subcommands.
   parser.add_argument(
@@ -96,9 +99,11 @@ def main():
   print('Congratulations!')
   if args.serial:
     #PLATFORMIO="$(which platformio)"
+    cmd = ['platformio', 'serialports', 'monitor', '--baud', '115200']
     print('Run the following to monitor the device over the serial port:')
     print('')
-    print('  platformio serialports monitor --baud 115200')
+    print('  %s' % ' '.join(cmd))
+    return subprocess.call(cmd)
   return 0
 
 
