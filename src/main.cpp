@@ -203,7 +203,7 @@ PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
       if (!v) {
-        Monitors.set(Actuator::STOP);
+        Seat.set(Actuator::STOP);
         return;
       }
       Seat.set(Actuator::UP);
@@ -214,7 +214,7 @@ PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
       if (!v) {
-        Monitors.set(Actuator::STOP);
+        Seat.set(Actuator::STOP);
         return;
       }
       Seat.set(Actuator::DOWN);
