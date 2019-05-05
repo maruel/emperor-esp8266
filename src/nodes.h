@@ -61,6 +61,7 @@ public:
 
   // Sets the logical value.
   void set(bool l) {
+    Homie.getLogger() << pin << ".set(" << l << ")" << endl;
     digitalWrite(pin, l != idle_ ? HIGH : LOW);
     value_ = l;
   }
@@ -157,7 +158,7 @@ private:
   void broadcast() {
     bool level = pin_.get();
     const char* value = level ? "true" : "false";
-    Homie.getLogger() << "to_mqtt(" << getId() << ", " << value << ")" << endl;
+    Homie.getLogger() << getId() << ".broadcast(" << value << ")" << endl;
     setProperty("on").send(value);
     onSet_(level);
   }
@@ -180,7 +181,7 @@ public:
       : HomieNode(name, "output"), onSet_(onSet), pin_(pin, idle) {
     advertise("on").settable(
         [&](const HomieRange &range, const String &value) {
-          return _onPropSet(value);
+          return _from_mqtt(value);
         });
     // datatype = "boolean"
   }
@@ -193,7 +194,7 @@ public:
   void set(bool level) {
     pin_.set(level);
     const char* value = level ? "true" : "false";
-    Homie.getLogger() << "to_mqtt(" << getId() << ", " << value << ")" << endl;
+    Homie.getLogger() << getId() << ".set(" << value << ")" << endl;
     setProperty("on").send(value);
   }
 
@@ -202,7 +203,7 @@ public:
   }
 
 private:
-  bool _onPropSet(const String &value);
+  bool _from_mqtt(const String &value);
 
   void (*const onSet_)(bool v);
   PinOut pin_;
@@ -220,7 +221,7 @@ public:
       : HomieNode(name, "pwm"), onSet_(onSet), pin_(pin) {
     advertise("pwm").settable(
         [&](const HomieRange &range, const String &value) {
-          return _onPropSet(value);
+          return _from_mqtt(value);
         });
     // datatype = "integer"
     // format = 0:PWMRANGE
@@ -236,7 +237,7 @@ public:
 
   void set(int level) {
     String value(pin_.set(level));
-    Homie.getLogger() << "to_mqtt(" << getId() << ", " << value << ")" << endl;
+    Homie.getLogger() << getId() << ".set(" << value << ")" << endl;
     setProperty("pwm").send(value);
   }
 
@@ -245,7 +246,7 @@ public:
   }
 
 private:
-  bool _onPropSet(const String &value);
+  bool _from_mqtt(const String &value);
 
   void (*const onSet_)(int v);
   PinPWM pin_;
@@ -261,7 +262,7 @@ public:
       : HomieNode(name, "freq"), onSet_(onSet), pin_(pin) {
     advertise("freq").settable(
         [&](const HomieRange &range, const String &value) {
-          return _onPropSet(value);
+          return _from_mqtt(value);
         });
     // datatype = "integer"
     // format = 0:20000
@@ -274,7 +275,7 @@ public:
 
   void set(int freq) {
     String value(pin_.set(freq, -1));
-    Homie.getLogger() << "to_mqtt(" << getId() << ", " << value << ")" << endl;
+    Homie.getLogger() << getId() << ".set(" << value << ")" << endl;
     setProperty("freq").send(value);
   }
 
@@ -283,7 +284,7 @@ public:
   }
 
 private:
-  bool _onPropSet(const String &value);
+  bool _from_mqtt(const String &value);
 
   void (*const onSet_)(int v);
   PinTone pin_;

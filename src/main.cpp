@@ -96,32 +96,7 @@ public:
         left_(left, idleleft), right_(right, idleright) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {
-          Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
-          // If we get an action and we were not idle, go idle. This is to
-          // prevent quick back and forth, which would be harsh on the actuator.
-          // Better be safe than sorry.
-          if (left_.get() == right_.get()) {
-            if (value.equals("up")) {
-              set_relays(true, false);
-              setProperty("direction").send(value);
-              return true;
-            }
-            if (value.equals("down")) {
-              set_relays(false, true);
-              setProperty("direction").send(value);
-              return true;
-            }
-            // Ignore bad values and reset to stop. So sending garbagge still
-            // stops the actuator.
-            if (!value.equals("stop")) {
-              Homie.getLogger() << "  bad value" << endl;
-            }
-          } else if (!value.equals("stop")) {
-            Homie.getLogger() << "  value ignored due to different pin values" << endl;
-          }
-          set_relays(false, false);
-          setProperty("direction").send("stop");
-          return true;
+          return _from_mqtt(value);
         });
     // datatype = enum
     // format = "stop,up,down"
@@ -132,7 +107,7 @@ public:
   }
 
   void set(Direction d) {
-    Homie.getLogger() << "to_mqtt(" << getId() << ", " << dirToStr(d) << ")" << endl;
+    Homie.getLogger() << "set(" << getId() << ", " << dirToStr(d) << ")" << endl;
     if (left_.get() == right_.get()) {
       if (d == UP) {
         set_relays(true, false);
@@ -153,8 +128,38 @@ public:
 
 private:
   void set_relays(bool left, bool right) {
+    Homie.getLogger() << getId() << ".set_relays(" << left << ", " << right << ")" << endl;
     left_.set(left);
     right_.set(right);
+  }
+
+  bool _from_mqtt(const String &value) {
+    Homie.getLogger() << getId() << "._from_mqtt(" << value << ")" << endl;
+    // If we get an action and we were not idle, go idle. This is to
+    // prevent quick back and forth, which would be harsh on the actuator.
+    // Better be safe than sorry.
+    if (left_.get() == right_.get()) {
+      if (value.equals("up")) {
+        set_relays(true, false);
+        setProperty("direction").send(value);
+        return true;
+      }
+      if (value.equals("down")) {
+        set_relays(false, true);
+        setProperty("direction").send(value);
+        return true;
+      }
+      // Ignore bad values and reset to stop. So sending garbagge still
+      // stops the actuator.
+      if (!value.equals("stop")) {
+        Homie.getLogger() << "  bad value" << endl;
+      }
+    } else if (!value.equals("stop")) {
+      Homie.getLogger() << "  value ignored due to different pin values" << endl;
+    }
+    set_relays(false, false);
+    setProperty("direction").send("stop");
+    return true;
   }
 
   PinOut left_;
