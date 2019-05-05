@@ -68,7 +68,7 @@ const int LED_OUT = D4;               // GPIO2 ; Pull Up; Also onboard LED
 // amount of time, as it eventually is fully extended or retracted.
 //
 // See https://en.wikipedia.org/wiki/Actuator
-// 
+//
 // Each relay output can idle on different values, depending on the GPIO used.
 class Actuator : public HomieNode {
 public:
@@ -92,20 +92,20 @@ public:
   }
 
   Actuator(const char *name, int left, bool idleleft, int right, bool idleright)
-      : HomieNode(name, "actuator"), idleleft_(idleleft), idleright_(idleright),
+      : HomieNode(name, "actuator"),
         left_(left, idleleft), right_(right, idleright) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {
           if (value.equals("stop")) {
-            set(idleleft_, idleright_);
+            set(false, false);
             return true;
           }
           if (value.equals("up")) {
-            set(!idleleft_, idleright_);
+            set(true, false);
             return true;
           }
           if (value.equals("down")) {
-            set(idleleft_, !idleright_);
+            set(false, true);
             return true;
           }
           Homie.getLogger() << getId() << ": Bad value: " << value << endl;
@@ -122,20 +122,20 @@ public:
       break;
     case UP:
       if (left_.get() == right_.get()) {
-        set(!idleleft_, idleright_);
+        set(true, false);
         setProperty("direction").send("up");
         return;
       }
       break;
     case DOWN:
       if (left_.get() == right_.get()) {
-        set(idleleft_, !idleright_);
+        set(false, true);
         setProperty("direction").send("down");
         return;
       }
       break;
     }
-    set(idleleft_, idleright_);
+    set(false, false);
     setProperty("direction").send("stop");
   }
 
@@ -145,8 +145,6 @@ private:
     right_.set(v_right);
   }
 
-  const bool idleleft_;
-  const bool idleright_;
   PinOut left_;
   PinOut right_;
 };
@@ -155,11 +153,13 @@ private:
 // Homie nodes accessible through MQTT.
 //
 
+
 // Outputs.
 PinOutNode LED("led", LED_OUT, true, NULL);
 Actuator Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true);
 Actuator Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true);
 
+/*
 // Inputs. All of them idles High, so they are active when Low.
 PinInNode buttonMonitorUp(
     "button_monitor_up",
@@ -212,7 +212,7 @@ PinInNode buttonLED(
     },
     BUTTON_LED,
     false);
-
+*/
 
 #if defined(USE_WEB_SERVER)
 // Web server to serve the MQTT web UI. This is NOT the web server when in
@@ -232,7 +232,7 @@ void onHomieEvent(const HomieEvent& event) {
       break;
     case HomieEventType::MQTT_READY:
       // Reset the actual LEDs.
-      LED.set(buttonLED.get());
+      //LED.set(buttonLED.get());
       break;
     default:
       break;
@@ -302,9 +302,11 @@ void setup() {
 
 void loop() {
   Homie.loop();
+  /*
   buttonMonitorUp.update();
   buttonMonitorDown.update();
   buttonSeatUp.update();
   buttonSeatDown.update();
   buttonLED.update();
+  */
 }

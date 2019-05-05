@@ -72,7 +72,7 @@ function onFailure(context) {
 }
 
 function set_monitors(v) {
-  sendDevMsg('monitor/direction/set', v);
+  sendDevMsg('monitors/direction/set', v);
 }
 
 function set_seat(v) {
