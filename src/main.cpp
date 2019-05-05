@@ -34,7 +34,7 @@
 // - D5 (GPIO14) Idles High; Actuator Seat Down 
 // - D6 (GPIO12) Idles High; Actuator Monitor Up
 // - D7 (GPIO13) Idles High; Actuator Monitor Down
-// - D8 (GPIO15) Idles Low ; Actuator Seat Up
+// - D8 (GPIO15) Idles Low ; Actuator Seat Up TODO(maruel): Exchange with D1.
 // - 3v3
 
 
@@ -154,7 +154,7 @@ private:
 //
 
 // Outputs.
-PinOutNode LED("led", LED_OUT, true);
+PinOutNode LED("led", LED_OUT, true, NULL);
 Actuator Seat("seat", MOTOR_SEAT_UP, true, MOTOR_SEAT_DOWN, true);
 Actuator Monitors("monitors", MOTOR_MONITOR_UP, true, MOTOR_MONITOR_DOWN, false);
 
@@ -162,7 +162,7 @@ Actuator Monitors("monitors", MOTOR_MONITOR_UP, true, MOTOR_MONITOR_DOWN, false)
 PinInNode buttonMonitorUp(
     "button_monitor_up",
     [](bool v) {
-      if (v) {
+      if (!v) {
         Monitors.motor(Actuator::STOP);
         return;
       }
@@ -173,7 +173,7 @@ PinInNode buttonMonitorUp(
 PinInNode buttonMonitorDown(
     "button_monitor_down",
     [](bool v) {
-      if (v) {
+      if (!v) {
         Monitors.motor(Actuator::STOP);
         return;
       }
@@ -184,7 +184,7 @@ PinInNode buttonMonitorDown(
 PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
-      if (v) {
+      if (!v) {
         Monitors.motor(Actuator::STOP);
         return;
       }
@@ -195,7 +195,7 @@ PinInNode buttonSeatUp(
 PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
-      if (v) {
+      if (!v) {
         Monitors.motor(Actuator::STOP);
         return;
       }

@@ -77,25 +77,13 @@ int PinTone::set(int freq, int duration) {
   return freq_;
 }
 
-bool PinInNode::update() {
-  debouncer_.update();
-  if (debouncer_.rose()) {
-    broadcast(true);
-    return true;
-  } else if (debouncer_.fell()) {
-    broadcast(false);
-    return true;
-  }
-  return false;
-}
-
 bool PinOutNode::_onPropSet(const String &value) {
   int v = isBool(value);
   if (v == -1) {
     Homie.getLogger() << getId() << ": Bad value: " << value << endl;
     return false;
   }
-  set(v);
+  pin_.set(v != 0);
   if (onSet_ != NULL) {
     onSet_(v);
   }

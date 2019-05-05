@@ -12,25 +12,64 @@ int isBool(const String &v);
 int toInt(const String &v, int min, int max);
 String urlencode(const String& src);
 
-// Wrapper for an output pin.
-class PinOut {
+// Wrapper for an input pin.
+//
+// If idle is true, the values are reversed. This is useful to not cause a
+// "blip" on pins that default to pull high on boot.
+class PinIn {
 public:
-  explicit PinOut(int pin, bool level) : pin(pin) {
-    pinMode(pin, OUTPUT);
-    set(level);
+  explicit PinIn(int pin, bool idle) : pin(pin), idle_(idle) {
+    debouncer_.interval(25);
+    if (idle) {
+      debouncer_.attach(pin, INPUT_PULLUP);
+    } else {
+      debouncer_.attach(pin, INPUT);
+    }
   }
 
+  // Returns the logical value.
+  bool get() {
+    return debouncer_.read() != idle_;
+  }
+
+  bool update() {
+    return debouncer_.update();
+  }
+
+  const int pin;
+
+private:
+  Bounce debouncer_;
+  const bool idle_;
+
+  DISALLOW_COPY_AND_ASSIGN(PinIn);
+};
+
+// Wrapper for an output pin.
+//
+// If idle is true, the values are reversed. This is useful to not cause a
+// "blip" on pins that default to pull high on boot.
+class PinOut {
+public:
+  explicit PinOut(int pin, bool idle) : pin(pin), idle_(idle) {
+    pinMode(pin, OUTPUT);
+    set(false);
+  }
+
+  // Sets the logical value.
   void set(bool l) {
-    digitalWrite(pin, l ? HIGH : LOW);
+    digitalWrite(pin, l != idle_ ? HIGH : LOW);
     value_ = l;
   }
 
+  // Returns the logical value.
   bool get() { return value_; }
 
   const int pin;
 
 private:
   bool value_;
+  const bool idle_;
 
   DISALLOW_COPY_AND_ASSIGN(PinOut);
 };
@@ -77,7 +116,7 @@ private:
 // Homie nodes.
 //
 
-// Homie node representing an input pin.
+// Homie node representing an input pin. It is read only.
 //
 // onSet is called with true being the non-idle value. So if idle is true, the
 // value sent to onSet() are reversed.
@@ -87,52 +126,62 @@ class PinInNode : public HomieNode {
 public:
   explicit PinInNode(const char *name, void (*onSet)(bool v), int pin,
                      bool idle)
-      : HomieNode(name, "input"), onSet_(onSet), idle_(idle) {
-    if (idle) {
-      debouncer_.attach(pin, INPUT_PULLUP);
-    } else {
-      debouncer_.attach(pin, INPUT);
-    }
-    debouncer_.interval(25);
+      : HomieNode(name, "input"), onSet_(onSet), pin_(pin, idle) {
     advertise("on");
-    if (!update()) {
-      broadcast(debouncer_.read());
-    }
+    broadcast();
   }
 
-  bool update();
+  // Returns the logical value of the pin.
   bool get() {
-    return debouncer_.read();
+    return pin_.get();
+  }
+
+  // Must be called at every loop.
+  bool update() {
+    if (!pin_.update()) {
+      return false;
+    }
+    broadcast();
+    return true;
   }
 
 private:
-  void broadcast(bool level) {
-    setProperty("on").send(idle_ != level ? "true" : "false");
-    onSet_(idle_ != level);
+  void broadcast() {
+    bool level = pin_.get();
+    setProperty("on").send(level ? "true" : "false");
+    onSet_(level);
   }
 
   void (*const onSet_)(bool v);
-  Bounce debouncer_;
-  const bool idle_;
+  PinIn pin_;
 
   DISALLOW_COPY_AND_ASSIGN(PinInNode);
 };
 
 // Homie node representing an output pin.
+//
+// If idle is true, acts in reverse. This is important for pins that are pull
+// high, thus default to high upon boot which lasts ~600ms. This is most of the
+// pins.
 class PinOutNode : public HomieNode {
 public:
-  explicit PinOutNode(const char *name, int pin, bool level,
-                      void (*onSet)(bool v) = NULL)
-      : HomieNode(name, "output"), onSet_(onSet), pin_(pin, level) {
-    advertise("on").settable([&](const HomieRange &range, const String &value) {
-      return this->_onPropSet(value);
-    });
-    set(level);
+  explicit PinOutNode(const char *name, int pin, bool idle,
+                      void (*onSet)(bool v))
+      : HomieNode(name, "output"), onSet_(onSet), pin_(pin, idle) {
+    advertise("on").settable(
+        [&](const HomieRange &range, const String &value) {
+          return _onPropSet(value);
+        });
+    setProperty("on").send("false");
   }
 
+  // Overiddes the value and broadcast it.
   void set(bool level) {
-    pin_.set(level);
-    setProperty("on").send(level ? "true" : "false");
+    // In particular to skip redundant broadcast.
+    if (level != pin_.get()) {
+      pin_.set(level);
+      setProperty("on").send(level ? "true" : "false");
+    }
   }
 
   bool get() {
