@@ -32,6 +32,50 @@ def flash_serial(spiffs):
   subprocess.check_call(['platformio', 'run', '--target', 'upload'])
 
 
+def do(args):
+  print('Building the firmware')
+  env = os.environ.copy()
+  if args.log_serial:
+    env['LOG_SERIAL'] = (
+        env.get('LOG_SERIAL', '') + ' -D LOG_SERIAL=1').lstrip()
+  subprocess.check_call(['platformio', 'run', '--silent'], env=env)
+
+  # Print the firmware properties.
+  firmware = os.path.join('.pioenvs', 'd1_mini', 'firmware.bin')
+  subprocess.check_call(
+      [
+        sys.executable, os.path.join('scripts', 'firmware_parser.py'),
+        firmware,
+      ])
+  print('')
+
+  if args.mode == 'serial':
+    flash_serial(args.spiffs)
+  else:
+    # http://homieiot.github.io/homie-esp8266/docs/develop/others/ota-configuration-updates/
+    subprocess.check_call(
+        [
+          sys.executable, os.path.join('scripts', 'ota_updater.py'),
+          '-l', args.host,
+          '-p', str(args.port),
+          '-u', args.user,
+          '-d', args.password,
+          '-t', 'homie',
+          '-i', args.device,
+          firmware,
+        ])
+
+  print('Congratulations!')
+  if args.mode == 'serial':
+    #PLATFORMIO="$(which platformio)"
+    cmd = ['platformio', 'serialports', 'monitor', '--baud', '115200']
+    print('Run the following to monitor the device over the serial port:')
+    print('')
+    print('  %s' % ' '.join(cmd))
+    return subprocess.call(cmd)
+  return 0
+
+
 def main():
   os.chdir(DIR)
   parser = argparse.ArgumentParser()
@@ -77,47 +121,10 @@ def main():
   if os.path.isdir(bin_dir):
     os.environ['PATH'] += os.pathsep + bin_dir
 
-  print('Building the firmware')
-  env = os.environ.copy()
-  if args.log_serial:
-    env['LOG_SERIAL'] = (
-        env.get('LOG_SERIAL', '') + ' -D LOG_SERIAL=1').lstrip()
-  subprocess.check_call(['platformio', 'run', '--silent'], env=env)
-
-  # Print the firmware properties.
-  firmware = os.path.join('.pioenvs', 'd1_mini', 'firmware.bin')
-  subprocess.check_call(
-      [
-        sys.executable, os.path.join('scripts', 'firmware_parser.py'),
-        firmware,
-      ])
-  print('')
-
-  if args.mode == 'serial':
-    flash_serial(args.spiffs)
-  else:
-    # http://homieiot.github.io/homie-esp8266/docs/develop/others/ota-configuration-updates/
-    subprocess.check_call(
-        [
-          sys.executable, os.path.join('scripts', 'ota_updater.py'),
-          '-l', args.host,
-          '-p', str(args.port),
-          '-u', args.user,
-          '-d', args.password,
-          '-t', 'homie',
-          '-i', args.device,
-          firmware,
-        ])
-
-  print('Congratulations!')
-  if args.mode == 'serial':
-    #PLATFORMIO="$(which platformio)"
-    cmd = ['platformio', 'serialports', 'monitor', '--baud', '115200']
-    print('Run the following to monitor the device over the serial port:')
-    print('')
-    print('  %s' % ' '.join(cmd))
-    return subprocess.call(cmd)
-  return 0
+  try:
+    return do(args)
+  except subprocess.CalledProcessError as e:
+    return e.returncode
 
 
 if __name__ == '__main__':

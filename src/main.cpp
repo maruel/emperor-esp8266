@@ -96,6 +96,7 @@ public:
         left_(left, idleleft), right_(right, idleright) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {
+          Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
           // If we get an action and we were not idle, go idle. This is to
           // prevent quick back and forth, which would be harsh on the actuator.
           // Better be safe than sorry.
@@ -129,7 +130,7 @@ public:
   }
 
   void set(Direction d) {
-    Homie.getLogger() << dirToStr(d) << endl;
+    Homie.getLogger() << "to_mqtt(" << getId() << ", " << dirToStr(d) << ")" << endl;
     switch (d) {
     default:
     case STOP:

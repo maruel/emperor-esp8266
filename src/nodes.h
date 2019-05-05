@@ -156,7 +156,9 @@ public:
 private:
   void broadcast() {
     bool level = pin_.get();
-    setProperty("on").send(level ? "true" : "false");
+    const char* value = level ? "true" : "false";
+    Homie.getLogger() << "to_mqtt(" << getId() << ", " << value << ")" << endl;
+    setProperty("on").send(value);
     onSet_(level);
   }
 
@@ -178,6 +180,7 @@ public:
       : HomieNode(name, "output"), onSet_(onSet), pin_(pin, idle) {
     advertise("on").settable(
         [&](const HomieRange &range, const String &value) {
+          Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
           return _onPropSet(value);
         });
     // datatype = "boolean"
@@ -190,7 +193,9 @@ public:
   // Overiddes the value and broadcast it.
   void set(bool level) {
     pin_.set(level);
-    setProperty("on").send(level ? "true" : "false");
+    const char* value = level ? "true" : "false";
+    Homie.getLogger() << "to_mqtt(" << getId() << ", " << value << ")" << endl;
+    setProperty("on").send(value);
   }
 
   bool get() {
@@ -216,6 +221,7 @@ public:
       : HomieNode(name, "pwm"), onSet_(onSet), pin_(pin) {
     advertise("pwm").settable(
         [&](const HomieRange &range, const String &value) {
+        Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
           return this->_onPropSet(value);
         });
     // datatype = "integer"
@@ -231,7 +237,9 @@ public:
   }
 
   void set(int level) {
-    setProperty("pwm").send(String(pin_.set(level)));
+    String value(pin_.set(level));
+    Homie.getLogger() << "to_mqtt(" << getId() << ", " << value << ")" << endl;
+    setProperty("pwm").send(value);
   }
 
   int get() {
@@ -255,6 +263,7 @@ public:
       : HomieNode(name, "freq"), onSet_(onSet), pin_(pin) {
     advertise("freq").settable(
         [&](const HomieRange &range, const String &value) {
+        Homie.getLogger() << "from_mqtt(" << getId() << ", " << value << ")" << endl;
           return this->_onPropSet(value);
         });
     // datatype = "integer"
@@ -267,7 +276,9 @@ public:
   }
 
   void set(int freq) {
-    setProperty("freq").send(String(pin_.set(freq, -1)));
+    String value(pin_.set(freq, -1));
+    Homie.getLogger() << "to_mqtt(" << getId() << ", " << value << ")" << endl;
+    setProperty("freq").send(value);
   }
 
   int get() {
