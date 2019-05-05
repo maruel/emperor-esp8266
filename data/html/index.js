@@ -83,17 +83,8 @@ function onLED() {
   sendDevMsg('led/on/set', document.getElementById('LED').checked.toString());
 }
 
-/*
-function onBuzzer() {
-  if (document.getElementById('BUZZER').checked) {
-    sendDevMsg('buzzer/freq/set', '4000');
-  } else {
-    sendDevMsg('buzzer/freq/set', '0');
-  }
-}
-*/
-
 function sendDevMsg(topic, payload) {
+  // TODO(maruel): Set a warning otherwise.
   if (device) {
     sendMsg('homie/' + device + '/' + topic, payload);
   }
@@ -107,6 +98,8 @@ function sendMsg(topic, payload) {
 }
 
 function onMessageArrived(message) {
-  // TODO(maruel): As new devices are discovered, change UI to control multiple cars.
+  // TODO(maruel): As new devices are discovered, change UI to control multiple
+  // chairs.
+  // TODO(maruel): React to the messages.
   document.getElementById('messages').innerText += message.destinationName + ': ' + message.payloadString + '\n';
 }
