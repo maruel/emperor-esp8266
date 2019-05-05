@@ -15,7 +15,7 @@
 // - D4 (GPIO2) Out; Pulled HIGH; Drives on board LED; 10kOhm Pull Up; On startup 600ms low with 20ms of 25kHz
 // - RX (GPIO3) In
 // - D8 (GPIO15) In; LOW normal; HIGH boot to SDIO; 10kOhm Pull Down; On startup 200ms at 0.7V
-// - D0 (GPIO16) In; pulse signal to RST to wake up from wifi
+// - D0 (GPIO16) In; pulse signal to RST to wake up from wifi; Float
 
 // Left:
 // - TX (GPIO1) Idles High
@@ -30,11 +30,11 @@
 // Right:
 // - RST button
 // - A0 void
-// - D0 (GPIO16) Idles High; Button Seat Up
-// - D5 (GPIO14) Idles High; Actuator Seat Up
-// - D6 (GPIO12) Idles High; Actuator Seat Down
-// - D7 (GPIO13) Idles High; Actuator Monitor Up
-// - D8 (GPIO15) Idles Low ; Button Monitor Up
+// - D0 (GPIO16) Idles Float; Button Seat Up
+// - D5 (GPIO14) Idles High ; Actuator Seat Up
+// - D6 (GPIO12) Idles High ; Actuator Seat Down
+// - D7 (GPIO13) Idles High ; Actuator Monitor Up
+// - D8 (GPIO15) Idles Low  ; Button Monitor Up
 // - 3v3
 
 
@@ -47,8 +47,8 @@
 // Enable to start the web server. Uses more memory.
 #define USE_WEB_SERVER 1
 
-// Enable debugging.
-#define LOG_SERIAL 1
+// Enable debugging. Preferably use "./do.py --log-serial" instead.
+//#define LOG_SERIAL 1
 
 
 const int BUTTON_SEAT_UP = D0;        // GPIO16; Idles Low (Pulse to wake up) (TODO: Verify)
@@ -221,6 +221,8 @@ PinInNode buttonSeatDown(
     },
     BUTTON_SEAT_DOWN,
     true);
+#if !defined(LOG_SERIAL)
+// This pin is UART, so it cannot be used when Serial is used.
 PinInNode buttonLED(
     "button_led",
     [](bool v) {
@@ -228,6 +230,7 @@ PinInNode buttonLED(
     },
     BUTTON_LED,
     true);
+#endif
 
 #if defined(USE_WEB_SERVER)
 // Web server to serve the MQTT web UI. This is NOT the web server when in
@@ -254,7 +257,9 @@ void onHomieEvent(const HomieEvent& event) {
       buttonMonitorDown.init();
       buttonSeatUp.init();
       buttonSeatDown.init();
+#if !defined(LOG_SERIAL)
       buttonLED.init();
+#endif
       // Reset the actual LEDs.
       // LED.set(buttonLED.get());
       break;
@@ -292,6 +297,7 @@ void setup() {
 
 #if defined(LOG_SERIAL)
   Serial.println();
+  Serial.println("LED button disabled because of logging over serial");
   //Serial.println("Hostname: " + hostname);
   //hostname = "";
 #endif
@@ -330,5 +336,7 @@ void loop() {
   buttonMonitorDown.update();
   buttonSeatUp.update();
   buttonSeatDown.update();
+#if !defined(LOG_SERIAL)
   buttonLED.update();
+#endif
 }
