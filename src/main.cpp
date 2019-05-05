@@ -100,37 +100,35 @@ public:
           // prevent quick back and forth, which would be harsh on the actuator.
           // Better be safe than sorry.
           if (value.equals("stop")) {
-            set(false, false);
+            set_relays(false, false);
             return true;
           }
           if (left_.get() != right_.get()) {
-            // We were not in STOP, so ignore the message and override.
-            set(false, false);
-            setProperty("direction").send("stop");
-            return true;
+            if (value.equals("up")) {
+              set_relays(true, false);
+              return true;
+            }
+            if (value.equals("down")) {
+              set_relays(false, true);
+              return true;
+            }
+            // Ignore bad values and reset to stop. So sending garbagge still
+            // stops the actuator.
+            Homie.getLogger() << getId() << ": Bad value: " << value << endl;
           }
-          if (value.equals("up")) {
-            set(true, false);
-            return true;
-          }
-          if (value.equals("down")) {
-            set(false, true);
-            return true;
-          }
-          // Ignore bad values and reset to stop. So sending garbagge still
-          // stops the actuator.
-          Homie.getLogger() << getId() << ": Bad value: " << value << endl;
-          set(false, false);
+          set_relays(false, false);
           setProperty("direction").send("stop");
           return true;
         });
+    // datatype = enum
+    // format = "stop,up,down"
   }
 
   void init() {
     setProperty("direction").send("stop");
   }
 
-  void motor(Direction d) {
+  void set(Direction d) {
     Homie.getLogger() << dirToStr(d) << endl;
     switch (d) {
     default:
@@ -138,27 +136,27 @@ public:
       break;
     case UP:
       if (left_.get() == right_.get()) {
-        set(true, false);
+        set_relays(true, false);
         setProperty("direction").send("up");
         return;
       }
       break;
     case DOWN:
       if (left_.get() == right_.get()) {
-        set(false, true);
+        set_relays(false, true);
         setProperty("direction").send("down");
         return;
       }
       break;
     }
-    set(false, false);
+    set_relays(false, false);
     setProperty("direction").send("stop");
   }
 
 private:
-  void set(bool v_left, bool v_right) {
-    left_.set(v_left);
-    right_.set(v_right);
+  void set_relays(bool left, bool right) {
+    left_.set(left);
+    right_.set(right);
   }
 
   PinOut left_;
@@ -180,10 +178,10 @@ PinInNode buttonMonitorUp(
     "button_monitor_up",
     [](bool v) {
       if (!v) {
-        Monitors.motor(Actuator::STOP);
+        Monitors.set(Actuator::STOP);
         return;
       }
-      Monitors.motor(Actuator::UP);
+      Monitors.set(Actuator::UP);
     },
     BUTTON_MONITOR_UP,
     true);
@@ -191,10 +189,10 @@ PinInNode buttonMonitorDown(
     "button_monitor_down",
     [](bool v) {
       if (!v) {
-        Monitors.motor(Actuator::STOP);
+        Monitors.set(Actuator::STOP);
         return;
       }
-      Monitors.motor(Actuator::DOWN);
+      Monitors.set(Actuator::DOWN);
     },
     BUTTON_MONITOR_DOWN,
     true);
@@ -202,10 +200,10 @@ PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
       if (!v) {
-        Monitors.motor(Actuator::STOP);
+        Monitors.set(Actuator::STOP);
         return;
       }
-      Seat.motor(Actuator::UP);
+      Seat.set(Actuator::UP);
     },
     BUTTON_SEAT_UP,
     true);
@@ -213,10 +211,10 @@ PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
       if (!v) {
-        Monitors.motor(Actuator::STOP);
+        Monitors.set(Actuator::STOP);
         return;
       }
-      Seat.motor(Actuator::DOWN);
+      Seat.set(Actuator::DOWN);
     },
     BUTTON_SEAT_DOWN,
     true);
@@ -241,10 +239,19 @@ void onHomieEvent(const HomieEvent& event) {
     case HomieEventType::OTA_STARTED:
     case HomieEventType::ABOUT_TO_RESET:
       // Make sure to stop the actuators on OTA.
-      Seat.motor(Actuator::STOP);
-      Monitors.motor(Actuator::STOP);
+      Seat.set(Actuator::STOP);
+      Monitors.set(Actuator::STOP);
       break;
     case HomieEventType::MQTT_READY:
+      // Broadcast the state of every node.
+      LED.init();
+      Seat.init();
+      Monitors.init();
+      buttonMonitorUp.init();
+      buttonMonitorDown.init();
+      buttonSeatUp.init();
+      buttonSeatDown.init();
+      buttonLED.init();
       // Reset the actual LEDs.
       // LED.set(buttonLED.get());
       break;
@@ -287,15 +294,6 @@ void setup() {
 #endif
   Homie.onEvent(onHomieEvent);
   Homie.setup();
-
-  LED.init();
-  Seat.init();
-  Monitors.init();
-  buttonMonitorUp.init();
-  buttonMonitorDown.init();
-  buttonSeatUp.init();
-  buttonSeatDown.init();
-  buttonLED.init();
 
 #if defined(USE_WEB_SERVER)
   if (Homie.isConfigured()) {

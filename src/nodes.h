@@ -2,6 +2,9 @@
 // Use of this source code is governed under the Apache License, Version 2.0
 // that can be found in the LICENSE file.
 
+// See https://homieiot.github.io/specification/spec-core-develop/ for the
+// MQTT convention.
+
 #include <Homie.h>
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName)                                     \
@@ -129,6 +132,7 @@ public:
                      bool idle)
       : HomieNode(name, "input"), onSet_(onSet), pin_(pin, idle) {
     advertise("on");
+    // datatype = "boolean"
   }
 
   void init() {
@@ -176,6 +180,7 @@ public:
         [&](const HomieRange &range, const String &value) {
           return _onPropSet(value);
         });
+    // datatype = "boolean"
   }
 
   void init() {
@@ -184,11 +189,8 @@ public:
 
   // Overiddes the value and broadcast it.
   void set(bool level) {
-    // In particular to skip redundant broadcast.
-    if (level != pin_.get()) {
-      pin_.set(level);
-      setProperty("on").send(level ? "true" : "false");
-    }
+    pin_.set(level);
+    setProperty("on").send(level ? "true" : "false");
   }
 
   bool get() {
@@ -216,6 +218,12 @@ public:
         [&](const HomieRange &range, const String &value) {
           return this->_onPropSet(value);
         });
+    // datatype = "integer"
+    // format = 0:PWMRANGE
+    // or
+    // datatype = "float"
+    // format = 0:100
+    // unit: %
   }
 
   void init() {
@@ -249,6 +257,9 @@ public:
         [&](const HomieRange &range, const String &value) {
           return this->_onPropSet(value);
         });
+    // datatype = "integer"
+    // format = 0:20000
+    // unit = Hz
   }
 
   void init() {

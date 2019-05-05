@@ -17,7 +17,8 @@ def flash_serial(spiffs):
     print('Building SPIFFS')
     print('This erases all saved settings')
     print('')
-    subprocess.check_call(['platformio', 'run', '--target', 'buildfs'])
+    subprocess.check_call(
+        ['platformio', 'run', '--target', 'buildfs', '--silent'])
 
     print('')
     print('Flashing SPIFFS')
@@ -34,26 +35,38 @@ def flash_serial(spiffs):
 def main():
   os.chdir(DIR)
   parser = argparse.ArgumentParser()
-  # TODO(maruel): Make it two subcommands.
   parser.add_argument(
-      '--serial', action='store_true',
-      help='flash the firmware over serial')
-  parser.add_argument(
+      '--log-serial', action='store_true',
+      help='Enable logging over serial in the firmware')
+
+  subparsers = parser.add_subparsers(
+      title='subcommands', description='valid subcommands')
+
+  parser_cmd = subparsers.add_parser(
+      'serial', help='flash the firmware over serial')
+  parser_cmd.add_argument(
       '--spiffs', action='store_true',
       help='flash the SPIFFS partition too')
-  parser.add_argument(
-      '--ota-mqtt', action='store_true',
-      help='flash the firmware via MQTT with Homie protocol')
-  parser.add_argument(
-      '-H', '--host', help='MQTT host')
-  parser.add_argument(
-      '-P', '--port', type=int, default=1883, help='MQTT port')
-  parser.add_argument(
-      '-u', '--user', default='homie', help='MQTT username')
-  parser.add_argument(
-      '-p', '--password', default='homie', help='MQTT password')
-  parser.add_argument(
-      '-d', '--device', default='emperor', help='Homie device to flash')
+  parser_cmd.set_defaults(mode='serial')
+
+  parser_cmd = subparsers.add_parser(
+      'mqtt', help='flash the firmware via MQTT with Homie protocol')
+  parser_cmd.add_argument(
+      '-H', '--host', help='MQTT host', required=True)
+  parser_cmd.add_argument(
+      '-p', '--port', type=int, default=1883, metavar='1883',
+      help='MQTT port')
+  parser_cmd.add_argument(
+      '-u', '--user', default='homie', metavar='homie', help='MQTT username')
+  parser_cmd.add_argument(
+      '-P', '--password', default='homie', metavar='homie',
+      help='MQTT password')
+  parser_cmd.add_argument(
+      '-d', '--device', default='emperor',
+      metavar='emperor',
+      help='Homie device to flash')
+  parser_cmd.set_defaults(mode='mqtt')
+
   args = parser.parse_args()
 
   # Append platformio tool from Atom's package as the default if it wasn't
@@ -65,9 +78,11 @@ def main():
     os.environ['PATH'] += os.pathsep + bin_dir
 
   print('Building the firmware')
-  print('')
-  subprocess.check_call(['platformio', 'run'])
-  print('')
+  env = os.environ.copy()
+  if args.log_serial:
+    env['LOG_SERIAL'] = (
+        env.get('LOG_SERIAL', '') + ' -D LOG_SERIAL=1').lstrip()
+  subprocess.check_call(['platformio', 'run', '--silent'], env=env)
 
   # Print the firmware properties.
   firmware = os.path.join('.pioenvs', 'd1_mini', 'firmware.bin')
@@ -78,9 +93,9 @@ def main():
       ])
   print('')
 
-  if args.serial:
+  if args.mode == 'serial':
     flash_serial(args.spiffs)
-  elif args.host and args.device:
+  else:
     # http://homieiot.github.io/homie-esp8266/docs/develop/others/ota-configuration-updates/
     subprocess.check_call(
         [
@@ -91,13 +106,11 @@ def main():
           '-d', args.password,
           '-t', 'homie',
           '-i', args.device,
-          firmware,       
+          firmware,
         ])
-  else:
-    parser.error('provide either --serial or --device')
 
   print('Congratulations!')
-  if args.serial:
+  if args.mode == 'serial':
     #PLATFORMIO="$(which platformio)"
     cmd = ['platformio', 'serialports', 'monitor', '--baud', '115200']
     print('Run the following to monitor the device over the serial port:')
