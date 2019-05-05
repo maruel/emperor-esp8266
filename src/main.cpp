@@ -96,8 +96,17 @@ public:
         left_(left, idleleft), right_(right, idleright) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {
+          // If we get an action and we were not idle, go idle. This is to
+          // prevent quick back and forth, which would be harsh on the actuator.
+          // Better be safe than sorry.
           if (value.equals("stop")) {
             set(false, false);
+            return true;
+          }
+          if (left_.get() != right_.get()) {
+            // We were not in STOP, so ignore the message and override.
+            set(false, false);
+            setProperty("direction").send("stop");
             return true;
           }
           if (value.equals("up")) {
@@ -108,7 +117,11 @@ public:
             set(false, true);
             return true;
           }
+          // Ignore bad values and reset to stop. So sending garbagge still
+          // stops the actuator.
           Homie.getLogger() << getId() << ": Bad value: " << value << endl;
+          set(false, false);
+          setProperty("direction").send("stop");
           return true;
         });
     setProperty("direction").send("stop");
