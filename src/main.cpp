@@ -107,7 +107,7 @@ public:
   }
 
   void set(Direction d) {
-    Homie.getLogger() << "set(" << getId() << ", " << dirToStr(d) << ")" << endl;
+    Homie.getLogger() << getId() << ".set(" << dirToStr(d) << ")" << endl;
     if (left_.get() == right_.get()) {
       if (d == UP) {
         set_relays(true, false);

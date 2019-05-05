@@ -15,13 +15,55 @@ int isBool(const String &v);
 int toInt(const String &v, int min, int max);
 String urlencode(const String& src);
 
-// Wrapper for an input pin.
+// Wrapper for an input pin without debouncing.
 //
 // If idle is true, the values are reversed. This is useful to not cause a
 // "blip" on pins that default to pull high on boot.
-class PinIn {
+class PinInRaw {
 public:
-  explicit PinIn(int pin, bool idle) : pin(pin), idle_(idle) {
+  explicit PinInRaw(int pin, bool idle) : pin(pin), idle_(idle) {
+    if (idle) {
+      pinMode(pin, INPUT_PULLUP);
+    } else {
+      pinMode(pin, INPUT);
+    }
+    last_ = raw_get();
+  }
+
+  // Returns the logical value.
+  bool get() {
+    return last_;
+  }
+
+  bool update() {
+    bool cur = raw_get();
+    if (cur != last_) {
+      last_ = cur;
+      return true;
+    }
+    return false;
+  }
+
+  const int pin;
+
+private:
+  bool raw_get() {
+    return digitalRead(pin) != idle_;
+  }
+
+  const bool idle_;
+  bool last_;
+
+  DISALLOW_COPY_AND_ASSIGN(PinInRaw);
+};
+
+// Wrapper for a debounced input pin.
+//
+// If idle is true, the values are reversed. This is useful to not cause a
+// "blip" on pins that default to pull high on boot.
+class PinInDebounced {
+public:
+  explicit PinInDebounced(int pin, bool idle) : pin(pin), idle_(idle) {
     debouncer_.interval(25);
     if (idle) {
       debouncer_.attach(pin, INPUT_PULLUP);
@@ -45,7 +87,7 @@ private:
   Bounce debouncer_;
   const bool idle_;
 
-  DISALLOW_COPY_AND_ASSIGN(PinIn);
+  DISALLOW_COPY_AND_ASSIGN(PinInDebounced);
 };
 
 // Wrapper for an output pin.
@@ -164,7 +206,7 @@ private:
   }
 
   void (*const onSet_)(bool v);
-  PinIn pin_;
+  PinInRaw pin_;
 
   DISALLOW_COPY_AND_ASSIGN(PinInNode);
 };
