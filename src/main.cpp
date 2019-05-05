@@ -272,12 +272,14 @@ void setup() {
         url += urlencode(cfg.deviceId);
         url += "&host=";
         url += urlencode(cfg.mqtt.server.host);
-        // TODO(maruel): The websocket port number != cfg.mqtt.server.port.
-        url += "&port=9001";
+        // For now, assume the websocket port number is the normal TCP socket
+        // +1.
+        url += "&port=";
+        url += (cfg.mqtt.server.port+1)
         if (cfg.mqtt.auth) {
           url += "&user=";
           url += urlencode(cfg.mqtt.username);
-          url += "&pass=";
+          url += "&password=";
           url += urlencode(cfg.mqtt.password);
         }
         request->redirect(url);
