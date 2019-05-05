@@ -19,7 +19,7 @@
 
 // Left:
 // - TX (GPIO1) Idles High
-// - RX (GPIO3) Idles High; Button Seat Up
+// - RX (GPIO3) Idles High; Button LED (Doesn't work when logging is enabled)
 // - D1 (GPIO5) Idles High; Button Seat Down
 // - D2 (GPIO4) Idles High; Actuator Monitor Down
 // - D3 (GPIO0) Idles High; Button Monitor Down
@@ -30,7 +30,7 @@
 // Right:
 // - RST button
 // - A0 void
-// - D0 (GPIO16) Idles High; Button LED
+// - D0 (GPIO16) Idles High; Button Seat Up
 // - D5 (GPIO14) Idles High; Actuator Seat Up
 // - D6 (GPIO12) Idles High; Actuator Seat Down
 // - D7 (GPIO13) Idles High; Actuator Monitor Up
@@ -51,11 +51,11 @@
 #define LOG_SERIAL 1
 
 
-const int BUTTON_SEAT_UP = RX;        // GPIO3 ; Idles High (UART)
+const int BUTTON_SEAT_UP = D0;        // GPIO16; Idles Low (Pulse to wake up) (TODO: Verify)
 const int BUTTON_SEAT_DOWN = D1;      // GPIO5 ; Idles High
 const int BUTTON_MONITOR_UP = D8;     // GPIO15; Idles Low
 const int BUTTON_MONITOR_DOWN = D3;   // GPIO0 ; Pull Up (Boot mode)
-const int BUTTON_LED = D0;            // GPIO16; Idles Low (Pulse to wake up)
+const int BUTTON_LED = RX;            // GPIO3 ; Idles High (UART)
 const int ACTUATOR_SEAT_UP = D5;      // GPIO14; Idles High
 const int ACTUATOR_SEAT_DOWN = D6;    // GPIO12; Idles High
 const int ACTUATOR_MONITOR_UP = D7;   // GPIO13; Idles High
@@ -187,7 +187,7 @@ PinInNode buttonMonitorUp(
       Monitors.set(Actuator::UP);
     },
     BUTTON_MONITOR_UP,
-    true);
+    false);
 PinInNode buttonMonitorDown(
     "button_monitor_down",
     [](bool v) {
@@ -209,7 +209,7 @@ PinInNode buttonSeatUp(
       Seat.set(Actuator::UP);
     },
     BUTTON_SEAT_UP,
-    true);
+    false);
 PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
@@ -227,7 +227,7 @@ PinInNode buttonLED(
       LED.set(v);
     },
     BUTTON_LED,
-    false);
+    true);
 
 #if defined(USE_WEB_SERVER)
 // Web server to serve the MQTT web UI. This is NOT the web server when in
