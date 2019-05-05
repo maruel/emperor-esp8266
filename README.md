@@ -173,6 +173,8 @@ the chair remotely or log operations.
 ```
 cat << 'EOF' | sudo tee /etc/mosquitto/conf.d/ws.conf
 listener 1883
+protocol mqtt
+
 listener 9001
 protocol websockets
 EOF
@@ -217,6 +219,31 @@ the web UI:
 See [Homie
 documentation](https://homieiot.github.io/homie-esp8266/docs/2.0.0/quickstart/getting-started/#connecting-to-the-ap-and-configuring-the-device)
 for more details.
+
+
+## Debugging
+
+- Use mosquotto-clients on linux to confirm the server works.
+
+    ```
+    mosquitto_sub -h <host> -p 1883 -u <user> -P <password> -v -t homie/#
+    mosquitto_pub -h <host> -p 1883 -u <user> -P <password> -t homie/bar -m baz
+    ```
+
+- Use the web interface that is exposed on the ESP 8266.
+
+
+## Upgrade
+
+Homie allows OTA via MQTT:
+
+```
+git clone https://github.com/homieiot/homie-esp8266
+python homie-esp8266/scripts/ota_updater/ota_updater.py -l <host> -p 1883 -u <user> -d <password> -i emperor path/to/emperor-esp8266/.pioenvs/d1_mini/firmware.bin
+```
+
+Warning: for an unknown reason, OTA doesn't work if the device was flashed over
+Serial and not rebooted since then. Make sure to reset the device in-between.
 
 
 ## Contributing

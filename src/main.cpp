@@ -78,13 +78,13 @@ public:
   static const char *dirToStr(Direction d) {
     switch (d) {
     case STOP:
-      return "STOP";
+      return "stop";
     case UP:
-      return "UP";
+      return "up";
     case DOWN:
-      return "DOWN";
+      return "down";
     default:
-      return "<INVALID DIRECTION>";
+      return "<invalid direction>";
     }
   }
 
@@ -93,22 +93,22 @@ public:
         left_(left, idleleft), right_(right, idleright) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {
-          if (value.equalsIgnoreCase("STOP")) {
-            motor(STOP);
+          if (value.equals("stop")) {
+            set(idleleft_, idleright_);
             return true;
           }
-          if (value.equalsIgnoreCase("UP")) {
-            motor(UP);
+          if (value.equals("up")) {
+            set(!idleleft_, idleright_);
             return true;
           }
-          if (value.equalsIgnoreCase("DOWN")) {
-            motor(DOWN);
+          if (value.equals("down")) {
+            set(idleleft_, !idleright_);
             return true;
           }
           Homie.getLogger() << getId() << ": Bad value: " << value << endl;
           return true;
         });
-    setProperty("direction").send("STOP");
+    setProperty("direction").send("stop");
   }
 
   void motor(Direction d) {
@@ -116,25 +116,24 @@ public:
     switch (d) {
     default:
     case STOP:
-      set(idleleft_, idleright_);
       break;
     case UP:
-      // If we were not in STOP, stops instead. This is safer.
-      if (left_.get() != right_.get()) {
-        set(idleleft_, idleright_);
-      } else {
+      if (left_.get() == right_.get()) {
         set(!idleleft_, idleright_);
+        setProperty("direction").send("up");
+        return;
       }
       break;
     case DOWN:
-      // If we were not in STOP, stops instead. This is safer.
-      if (left_.get() != right_.get()) {
-        set(idleleft_, idleright_);
-      } else {
+      if (left_.get() == right_.get()) {
         set(idleleft_, !idleright_);
+        setProperty("direction").send("down");
+        return;
       }
       break;
     }
+    set(idleleft_, idleright_);
+    setProperty("direction").send("stop");
   }
 
 private:
@@ -238,6 +237,12 @@ void onHomieEvent(const HomieEvent& event) {
 }
 
 void setup() {
+  /*
+  String hostname("emperor");
+  hostname += String(ESP.getChipId(), HEX);
+  wifi_station_set_hostname(hostname.c_str());
+  */
+
 #if defined(LOG_SERIAL)
   Serial.begin(115200);
   // Increase debug output to maximum level:
@@ -260,6 +265,8 @@ void setup() {
 
 #if defined(LOG_SERIAL)
   Serial.println();
+  //Serial.println("Hostname: " + hostname);
+  //hostname = "";
 #endif
   Homie.onEvent(onHomieEvent);
   Homie.setup();
@@ -275,7 +282,7 @@ void setup() {
         // For now, assume the websocket port number is the normal TCP socket
         // +1.
         url += "&port=";
-        url += (cfg.mqtt.server.port+1)
+        url += (cfg.mqtt.server.port+1);
         if (cfg.mqtt.auth) {
           url += "&user=";
           url += urlencode(cfg.mqtt.username);
