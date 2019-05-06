@@ -15,7 +15,10 @@ int isBool(const String &v);
 int toInt(const String &v, int min, int max);
 String urlencode(const String& src);
 
-// Wrapper for an input pin without debouncing.
+// Wrapper for an input pin without real debouncing.
+//
+// It samples the GPIO at every update (which should be called inside loop())
+// and that's it.
 //
 // If idle is true, the values are reversed. This is useful to not cause a
 // "blip" on pins that default to pull high on boot.
@@ -58,6 +61,9 @@ private:
 };
 
 // Wrapper for a debounced input pin.
+//
+// It samples the GPIO at every update (which should be called inside loop())
+// and wait for at least 25ms before reacting.
 //
 // If idle is true, the values are reversed. This is useful to not cause a
 // "blip" on pins that default to pull high on boot.
@@ -103,7 +109,10 @@ public:
 
   // Sets the logical value.
   void set(bool l) {
-    Homie.getLogger() << pin << ".set(" << l << ")" << endl;
+    // Enabling this here is very noisy, but useful when deep down into
+    // debugging. Hence it's commented out by default but feel free to
+    // temporarily enable it if you are having a hard time.
+    //Homie.getLogger() << pin << ".set(" << l << ")" << endl;
     digitalWrite(pin, l != idle_ ? HIGH : LOW);
     value_ = l;
   }
