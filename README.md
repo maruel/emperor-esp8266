@@ -2,7 +2,7 @@
 
 Control a [MWELab Emperor 1510](https://www.mwelab.com/) with an ESP8266.
 
-![Emperor 1510](https://www.mwelab.com/en/images/wellbeing.jpg)
+![Emperor 1510](https://raw.githubusercontent.com/wiki/maruel/emperor-esp8266/wellbeing.jpg)
 
 *No* internet connectivity is needed, this isn't
 [InternetOfShit](https://twitter.com/internetofshit).
@@ -23,9 +23,16 @@ but they take longer to boot, which can be a small annoyance. Also there's
 higher expectations about keeping these systems up to date. On the other hand,
 these are powerful enough to only communicate over TLS/SSL.
 
+A WeMos D1 Mini:
 
 ![WeMos D1
-mini](https://wiki.wemos.cc/_media/products:d1:d1_mini_v3.0.0_3_16x9.jpg)
+mini](https://raw.githubusercontent.com/wiki/maruel/emperor-esp8266/d1_mini_v3.0.0_3_16x9.jpg)
+
+
+The Web UI:
+
+![Web
+UI](https://raw.githubusercontent.com/wiki/maruel/emperor-esp8266/web_ui.png)
 
 
 ## Steps
