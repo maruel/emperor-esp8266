@@ -15,26 +15,26 @@
 // - D4 (GPIO2) Out; Pulled HIGH; Drives on board LED; 10kOhm Pull Up; On startup 600ms low with 20ms of 25kHz
 // - RX (GPIO3) In
 // - D8 (GPIO15) In; LOW normal; HIGH boot to SDIO; 10kOhm Pull Down; On startup 200ms at 0.7V
-// - D0 (GPIO16) In; pulse signal to RST to wake up from wifi; Float
+// - D0 (GPIO16) In; pulse signal to RST to wake up from wifi; Float; Pull Down with INPUT_PULLDOWN_16
 
 // Left:
 // - TX (GPIO1) Idles High
-// - RX (GPIO3) Idles High; Button LED (Doesn't work when logging is enabled)
-// - D1 (GPIO5) Idles High; Button Seat Down
-// - D2 (GPIO4) Idles High; Actuator Monitor Down
-// - D3 (GPIO0) Idles High; Button Monitor Down
-// - D4 (GPIO2) LED Output; Low when LED on
+// - RX (GPIO3) Idles High           ; Button LED (Doesn't work when logging is enabled)
+// - D1 (GPIO5) Idles High           ; Button Monitor Up
+// - D2 (GPIO4) Idles High           ; Actuator Monitor Down
+// - D3 (GPIO0) Idles High           ; Button Monitor Down
+// - D4 (GPIO2) LED Output           ; Low when LED on
 // - GND
 // - 5V
 
 // Right:
 // - RST button
 // - A0 void
-// - D0 (GPIO16) Idles Float; Button Seat Up
-// - D5 (GPIO14) Idles High ; Actuator Seat Up
-// - D6 (GPIO12) Idles High ; Actuator Seat Down
-// - D7 (GPIO13) Idles High ; Actuator Monitor Up
-// - D8 (GPIO15) Idles Low  ; Button Monitor Up
+// - D0 (GPIO16) Idles Float (or Low); Button Seat Down
+// - D5 (GPIO14) Idles High          ; Actuator Seat Up
+// - D6 (GPIO12) Idles High          ; Actuator Seat Down
+// - D7 (GPIO13) Idles High          ; Actuator Monitor Up
+// - D8 (GPIO15) Idles Low           ; Button Seat Up
 // - 3v3
 
 
@@ -51,9 +51,9 @@
 //#define LOG_SERIAL 1
 
 
-const int BUTTON_SEAT_UP = D0;        // GPIO16; Idles Low (Pulse to wake up) (TODO: Verify)
-const int BUTTON_SEAT_DOWN = D1;      // GPIO5 ; Idles High
-const int BUTTON_MONITOR_UP = D8;     // GPIO15; Idles Low
+const int BUTTON_SEAT_UP = D8;        // GPIO15; Idles Low
+const int BUTTON_SEAT_DOWN = D0;      // GPIO16; Idles Low with INPUT_PULLDOWN_16 (Pulse to wake up)
+const int BUTTON_MONITOR_UP = D1;     // GPIO5 ; Idles High
 const int BUTTON_MONITOR_DOWN = D3;   // GPIO0 ; Pull Up (Boot mode)
 const int BUTTON_LED = RX;            // GPIO3 ; Idles High (UART)
 const int ACTUATOR_SEAT_UP = D5;      // GPIO14; Idles High
@@ -187,7 +187,7 @@ PinInNode buttonMonitorUp(
       Monitors.set(Actuator::UP);
     },
     BUTTON_MONITOR_UP,
-    false);
+    true);
 PinInNode buttonMonitorDown(
     "button_monitor_down",
     [](bool v) {
@@ -220,7 +220,7 @@ PinInNode buttonSeatDown(
       Seat.set(Actuator::DOWN);
     },
     BUTTON_SEAT_DOWN,
-    true);
+    false);
 #if !defined(LOG_SERIAL)
 // This pin is UART, so it cannot be used when Serial is used.
 PinInNode buttonLED(
