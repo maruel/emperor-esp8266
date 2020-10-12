@@ -18,21 +18,28 @@ if [ ! -d .venv ]; then
 fi
 
 if [ ! -f ./.venv/bin/activate ]; then
-  if [ -f .venv/virtualenv.pyz ]; then
-    VIRTUALENV="python .venv/virtualenv.pyz"
+  VIRTUALENV="$(which virtualenv || true)"
+  if [ "$VIRTUALENV" = "" ]; then
+    echo ""
+    echo "Get virtualenv"
+    echo ""
+    curl https://bootstrap.pypa.io/virtualenv.pyz > .venv/virtualenv.pyz
+    echo ""
+    echo "Create virtualenv"
+    echo ""
+    python3 .venv/virtualenv.pyz .venv
+    rm .venv/virtualenv.pyz
   else
-    VIRTUALENV="$(which virtualenv || true)"
-    if [ "$VIRTUALENV" = "" ]; then
-      echo ""
-      echo "Get virtualenv"
-      echo ""
-      curl https://bootstrap.pypa.io/virtualenv.pyz > .venv/virtualenv.pyz
-      VIRTUALENV="python .venv/virtualenv.pyz"
-    fi
+    echo ""
+    echo "Create virtualenv"
+    echo ""
+    $VIRTUALENV .venv
   fi
-  $VIRTUALENV .venv
 fi
 
+echo ""
+echo "Activating virtualenv"
+echo ""
 source ./.venv/bin/activate
 
 PLATFORMIO="$(which platformio || true)"

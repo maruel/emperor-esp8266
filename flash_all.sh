@@ -12,7 +12,6 @@ cd "$(dirname $0)"
 source .venv/bin/activate
 PLATFORMIO="$(which platformio)"
 
-echo ""
 echo "Before uploading, make sure it builds"
 echo ""
 platformio run
