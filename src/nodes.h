@@ -20,15 +20,21 @@ String urlencode(const String& src);
 // It samples the GPIO at every update (which should be called inside loop())
 // and that's it.
 //
-// If idle is true, the values are reversed. This is useful to not cause a
-// "blip" on pins that default to pull high on boot.
+// If idle is true, idles on PULLUP, if false, assumes a pull down. This is
+// useful to not cause a "blip" on pins that default to pull high on boot.
 class PinInRaw {
 public:
   explicit PinInRaw(int pin, bool idle) : pin(pin), idle_(idle) {
     if (idle) {
+      // Assert not D0.
       pinMode(pin, INPUT_PULLUP);
     } else {
-      pinMode(pin, INPUT);
+      // GPIO16 is a bit one-off.
+      if (pin == D0) {
+        pinMode(pin, INPUT_PULLDOWN_16);
+      } else {
+        pinMode(pin, INPUT);
+      }
     }
     last_ = raw_get();
   }
@@ -182,7 +188,7 @@ class PinInNode : public HomieNode {
 public:
   explicit PinInNode(const char *name, void (*onSet)(bool v), int pin,
                      bool idle)
-      : HomieNode(name, "input"), onSet_(onSet), pin_(pin, idle) {
+      : HomieNode(name, name, "input"), onSet_(onSet), pin_(pin, idle) {
     advertise("on");
     // datatype = "boolean"
   }
@@ -229,7 +235,7 @@ class PinOutNode : public HomieNode {
 public:
   explicit PinOutNode(const char *name, int pin, bool idle,
                       void (*onSet)(bool v))
-      : HomieNode(name, "output"), onSet_(onSet), pin_(pin, idle) {
+      : HomieNode(name, name, "output"), onSet_(onSet), pin_(pin, idle) {
     advertise("on").settable(
         [&](const HomieRange &range, const String &value) {
           return _from_mqtt(value);
@@ -269,7 +275,7 @@ class PinPWMNode : public HomieNode {
 public:
   explicit PinPWMNode(const char *name, int pin,
                       void (*onSet)(int v))
-      : HomieNode(name, "pwm"), onSet_(onSet), pin_(pin) {
+      : HomieNode(name, name, "pwm"), onSet_(onSet), pin_(pin) {
     advertise("pwm").settable(
         [&](const HomieRange &range, const String &value) {
           return _from_mqtt(value);
@@ -310,7 +316,7 @@ class PinToneNode : public HomieNode {
 public:
   explicit PinToneNode(const char *name, int pin,
                       void (*onSet)(int v))
-      : HomieNode(name, "freq"), onSet_(onSet), pin_(pin) {
+      : HomieNode(name, name, "freq"), onSet_(onSet), pin_(pin) {
     advertise("freq").settable(
         [&](const HomieRange &range, const String &value) {
           return _from_mqtt(value);

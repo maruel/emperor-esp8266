@@ -92,7 +92,7 @@ public:
   }
 
   Actuator(const char *name, int left, bool idleleft, int right, bool idleright)
-      : HomieNode(name, "actuator"),
+      : HomieNode(name, name, "actuator"),
         left_(left, idleleft), right_(right, idleright) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {

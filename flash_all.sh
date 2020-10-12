@@ -1,17 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2019 Marc-Antoine Ruel. All rights reserved.
 # Use of this source code is governed under the Apache License, Version 2.0
 # that can be found in the LICENSE file.
 
 set -eu
 
-# Append platformio tool from Atom's package as the default if it wasn't
-# installed system wide.
-if [ -d $HOME/.atom/packages/platformio-ide/penv/bin ]; then
-  PATH="$PATH:$HOME/.atom/packages/platformio-ide/penv/bin"
-  hash -r
-fi
+cd "$(dirname $0)"
 
+./install_platformio.sh
+
+source .venv/bin/activate
 PLATFORMIO="$(which platformio)"
 
 echo ""
@@ -39,4 +37,4 @@ echo ""
 echo "Congratulations!"
 echo "Run the following to monitor the device over the serial port:"
 echo ""
-echo "  $PLATFORMIO serialports monitor --baud 115200"
+echo "  $PLATFORMIO device monitor --baud 115200"

@@ -143,7 +143,7 @@ Quick summary:
 1. 4x GPIO Computer -> HL-54S
 2. 1x Power 5V (from Computer) -> HL-54S
 3. 5x Power 12V -> HL-54S
-4. 4x Power HL-54S -> Moteurs
+4. 4x Power HL-54S -> Motors
 5. 5x GPIO Buttons -> Computer
 6. 1x (TODO: needs driver) Computer -> LED
 
