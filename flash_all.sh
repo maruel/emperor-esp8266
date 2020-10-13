@@ -40,6 +40,6 @@ platformio run --target upload
 
 echo ""
 echo "Congratulations!"
-echo "Run the following to monitor the device over the serial port:"
-echo ""
+echo "If you want to use debugging, enable it in platform.ini,"
+echo "then you can monitor the device over the serial port:"
 echo "  $PLATFORMIO device monitor --baud 115200"
