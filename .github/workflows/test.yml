@@ -30,7 +30,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: .venv
-        key: ${{ runner.os }}-venv-${{ hashFiles('install_platformio.sh') }}
+        key: ${{ runner.os }}-venv-${{ hashFiles('setup.sh', 'requirements.txt') }}
         restore-keys: ${{ runner.os }}-venv-
     - name: 'Cache: .pio'
       uses: actions/cache@v1
@@ -38,13 +38,11 @@ jobs:
         path: .pio
         key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
         restore-keys: ${{ runner.os }}-pio-
-    # Technically, this could be "pip install pio" but I want to make sure the
-    # setup script works.
-    - name: "Setup"
-      run: ./install_platformio.sh
+    - name: "./setup.sh"
+      run: ./setup.sh
     # flash_all.sh will fail because it doesn't find a device, so run "pio run"
     # manually.
-    - name: "pio run"
+    - name: "pio run -s"
       run: |
         source .venv/bin/activate
-        pio run
+        pio run -s

@@ -96,7 +96,7 @@ Confirm with [main.cpp](src/main.cpp).
 
 - Python 3.
 - [PlatformIO](http://platformio.org) (optional)
-  - `./install_platformio.sh` installs a local version in virtualenv.
+  - `./setup.sh` installs a local version in virtualenv.
 - Mosquitto (optional)
   - Only needed if you setup Wifi on the WeMos and want to control the chair
     remotely or log operations.

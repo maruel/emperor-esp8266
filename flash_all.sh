@@ -7,10 +7,9 @@ set -eu
 
 cd "$(dirname $0)"
 
-./install_platformio.sh
+./setup.sh
 
 source .venv/bin/activate
-PLATFORMIO="$(which platformio)"
 
 if [ ! -f data/homie/config.json ]; then
   echo "Create data/homie/config.json file first."
@@ -18,28 +17,23 @@ if [ ! -f data/homie/config.json ]; then
   exit 1
 fi
 
-echo "Before uploading, make sure it builds"
-echo ""
-platformio run
-
-
-platformio run --target buildfs
-echo ""
-echo "Flashing SPIFFS"
-echo "This erases all saved settings"
-echo ""
-platformio run --target uploadfs
+echo "- Building code"
+pio run -s
+echo "- Building data"
+pio run --target buildfs -s
+echo "- Flashing data (SPIFFS)"
+echo "  This erases all saved settings"
+pio run --target uploadfs -s
 
 # TODO(maruel): Script for OTA
 # http://homieiot.github.io/homie-esp8266/docs/develop/others/ota-configuration-updates/
 # https://github.com/homieiot/homie-esp8266/blob/develop/scripts/ota_updater/ota_updater.py
 
-echo ""
-echo "Flashing code"
-platformio run --target upload
+echo "- Flashing code"
+pio run --target upload -s
 
 echo ""
 echo "Congratulations!"
 echo "If you want to use debugging, enable it in platform.ini,"
 echo "then you can monitor the device over the serial port:"
-echo "  $PLATFORMIO device monitor --baud 115200"
+echo "  ./venv/bin/pio device monitor --baud 115200"
