@@ -124,29 +124,11 @@ The system operates at 4 different voltages:
 	- That's the level at which the GPIO run.
 
 
-### GPIOs
-
-Nearly all the connectors of the WeMos are used.
-
-- Outputs: 5
-  - 2x 2 motors
-  - 1x LED driver + 5V.
-- Inputs: 5
-  - 1x light
-  - 2x 2 motors
-
-
 ### Wiring
 
-Quick summary:
+![Schematics](https://raw.githubusercontent.com/wiki/maruel/emperor-esp8266/schematics.png)
 
-1. 4x GPIO Computer -> HL-54S
-2. 1x Power 5V (from Computer) -> HL-54S
-3. 5x Power 12V -> HL-54S
-4. 4x Power HL-54S -> Motors
-5. 5x GPIO Buttons -> Computer
-6. 1x (TODO: needs driver) Computer -> LED
-
+Confirm with [main.cpp](src/main.cpp).
 
 ## Software
 
