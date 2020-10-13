@@ -12,6 +12,12 @@ cd "$(dirname $0)"
 source .venv/bin/activate
 PLATFORMIO="$(which platformio)"
 
+if [ ! -f data/homie/config.json ]; then
+  echo "Create data/homie/config.json file first."
+  echo "See config_example.json as a example."
+  exit 1
+fi
+
 echo "Before uploading, make sure it builds"
 echo ""
 platformio run

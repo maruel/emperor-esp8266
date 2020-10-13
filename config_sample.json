@@ -2,8 +2,8 @@ Example as described at https://homieiot.github.io/homie-esp8266/docs/2.0.0/conf
 Remove this header first and copy into data/homie.
 
 {
-  "name": "Emperor",
-  "device_id": "emperor",
+  "name": "Emperor1510",
+  "device_id": "emperor1510",
   "device_stats_interval": 60,
   "wifi": {
     "ssid": "Put your wifi SSID here",
