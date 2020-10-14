@@ -176,6 +176,8 @@ PinOutNode LED("led", LED_OUT, true, NULL);
 Actuator Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true);
 Actuator Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true);
 
+const int period = 50;
+
 // Inputs. All of them idles High, so they are active when Low.
 PinInNode buttonMonitorUp(
     "button_monitor_up",
@@ -187,7 +189,8 @@ PinInNode buttonMonitorUp(
       Monitors.set(Actuator::UP);
     },
     BUTTON_MONITOR_UP,
-    true);
+    true,
+    period);
 PinInNode buttonMonitorDown(
     "button_monitor_down",
     [](bool v) {
@@ -198,7 +201,8 @@ PinInNode buttonMonitorDown(
       Monitors.set(Actuator::DOWN);
     },
     BUTTON_MONITOR_DOWN,
-    true);
+    true,
+    period);
 PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
@@ -209,7 +213,8 @@ PinInNode buttonSeatUp(
       Seat.set(Actuator::UP);
     },
     BUTTON_SEAT_UP,
-    false);
+    false,
+    period);
 PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
@@ -220,7 +225,8 @@ PinInNode buttonSeatDown(
       Seat.set(Actuator::DOWN);
     },
     BUTTON_SEAT_DOWN,
-    false);
+    false,
+    period);
 #if !defined(LOG_SERIAL)
 // This pin is UART, so it cannot be used when Serial is used.
 PinInNode buttonLED(
@@ -229,7 +235,8 @@ PinInNode buttonLED(
       LED.set(v);
     },
     BUTTON_LED,
-    true);
+    true,
+    period);
 #endif
 
 #if defined(USE_WEB_SERVER)

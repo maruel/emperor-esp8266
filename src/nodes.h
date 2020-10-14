@@ -15,7 +15,7 @@ int isBool(const String &v);
 int toInt(const String &v, int min, int max);
 String urlencode(const String& src);
 
-// Wrapper for an input pin without real debouncing.
+// Wrapper for an input pin without noise filtering.
 //
 // It samples the GPIO at every update (which should be called inside loop())
 // and that's it.
@@ -69,18 +69,23 @@ private:
 // Wrapper for a debounced input pin.
 //
 // It samples the GPIO at every update (which should be called inside loop())
-// and wait for at least 25ms before reacting.
+// and wait for at least <period> ms before reacting.
 //
-// If idle is true, the values are reversed. This is useful to not cause a
-// "blip" on pins that default to pull high on boot.
+// If idle is true, idles on PULLUP, if false, assumes a pull down. This is
+// useful to not cause a "blip" on pins that default to pull high on boot.
 class PinInDebounced {
 public:
-  explicit PinInDebounced(int pin, bool idle) : pin(pin), idle_(idle) {
-    debouncer_.interval(25);
+  explicit PinInDebounced(int pin, bool idle, int period) : pin(pin), idle_(idle) {
+    debouncer_.interval(period);
     if (idle) {
       debouncer_.attach(pin, INPUT_PULLUP);
     } else {
-      debouncer_.attach(pin, INPUT);
+      // GPIO16 is a bit one-off.
+      if (pin == D0) {
+        debouncer_.attach(pin, INPUT_PULLDOWN_16);
+      } else {
+        debouncer_.attach(pin, INPUT);
+      }
     }
   }
 
@@ -182,13 +187,11 @@ private:
 //
 // onSet is called with true being the non-idle value. So if idle is true, the
 // value sent to onSet() are reversed.
-//
-// Uses a debouncer with a 25ms delay.
 class PinInNode : public HomieNode {
 public:
   explicit PinInNode(const char *name, void (*onSet)(bool v), int pin,
-                     bool idle)
-      : HomieNode(name, name, "input"), onSet_(onSet), pin_(pin, idle) {
+                     bool idle, int period)
+      : HomieNode(name, name, "input"), onSet_(onSet), pin_(pin, idle, period) {
     advertise("on");
     // datatype = "boolean"
   }
@@ -221,7 +224,7 @@ private:
   }
 
   void (*const onSet_)(bool v);
-  PinInRaw pin_;
+  PinInDebounced pin_;
 
   DISALLOW_COPY_AND_ASSIGN(PinInNode);
 };
