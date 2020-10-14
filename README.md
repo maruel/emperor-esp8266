@@ -145,7 +145,7 @@ The ESP8266 takes less than a second to boot.
 - Uncomment `build_flags=-D LOG_SERIAL=1` in [platform.ini](platform.ini), flash
   again then run to monitor the serial log over USB:
     ```
-    platformio device monitor --baud 115200
+    platformio device monitor
     ```
 
 ## Upgrade
