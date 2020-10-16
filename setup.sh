@@ -22,7 +22,8 @@ if [ ! -f ./.venv/bin/activate ]; then
   VIRTUALENV="$(which virtualenv || true)"
   if [ "$VIRTUALENV" = "" ]; then
     echo "- Getting virtualenv"
-    curl -SLs https://bootstrap.pypa.io/virtualenv.pyz > .venv/virtualenv.pyz
+    wget --quiet https://bootstrap.pypa.io/virtualenv.pyz -O .venv/virtualenv.pyz
+    #curl -SLs https://bootstrap.pypa.io/virtualenv.pyz > .venv/virtualenv.pyz
     echo "- Creating virtualenv"
     # Fails on python 3.4 to 3.6 is the path is not absolute.
     python3 "$(pwd)/.venv/virtualenv.pyz" $QUIET .venv
