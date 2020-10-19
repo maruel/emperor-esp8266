@@ -276,12 +276,6 @@ void onHomieEvent(const HomieEvent& event) {
 }
 
 void setup() {
-  /*
-  String hostname("emperor");
-  hostname += String(ESP.getChipId(), HEX);
-  wifi_station_set_hostname(hostname.c_str());
-  */
-
 #if defined(LOG_SERIAL)
   Serial.begin(115200);
   // Increase debug output to maximum level:
@@ -298,15 +292,14 @@ void setup() {
 
   // There's no pin available.
   Homie.disableResetTrigger();
-  // Setup.
-  Homie_setFirmware("emperor", "1.0.0");
+  // Setup. The GIT_REV variable is defined in platform.ini
+  Homie_setFirmware("emperor", GIT_REV);
   Homie_setBrand("Emperor");
 
 #if defined(LOG_SERIAL)
   Serial.println();
   Serial.println("LED button disabled because of logging over serial");
-  //Serial.println("Hostname: " + hostname);
-  //hostname = "";
+  Serial.println("Version: " GIT_REV);
 #endif
   Homie.onEvent(onHomieEvent);
   Homie.setup();
