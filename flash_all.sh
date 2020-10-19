@@ -32,7 +32,7 @@ pio run --target upload -s
 
 echo ""
 echo "Flashed:"
-./scripts/firmware_parser.py .pio/build/d1_mini/firmware.bin
+./scripts/firmware_parser.py
 
 echo ""
 echo "Congratulations!"
