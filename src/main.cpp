@@ -70,9 +70,11 @@ const int LED_OUT = D4;               // GPIO2 ; Pull Up; Also onboard LED
 
 
 // Outputs.
+// Stop after 10 seconds.
+const int runTime = 10000;
 PinOutNode LED("led", LED_OUT, true, NULL);
-ActuatorNode Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true);
-ActuatorNode Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true);
+ActuatorNode Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true, runTime);
+ActuatorNode Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true, runTime);
 
 
 // Inputs. All of them idles High, so they are active when Low.
@@ -81,10 +83,10 @@ PinInNode buttonMonitorUp(
     "button_monitor_up",
     [](bool v) {
       if (!v) {
-        Monitors.set(ActuatorNode::STOP);
+        Monitors.set(Actuator::STOP);
         return;
       }
-      Monitors.set(ActuatorNode::UP);
+      Monitors.set(Actuator::UP);
     },
     BUTTON_MONITOR_UP,
     true,
@@ -93,10 +95,10 @@ PinInNode buttonMonitorDown(
     "button_monitor_down",
     [](bool v) {
       if (!v) {
-        Monitors.set(ActuatorNode::STOP);
+        Monitors.set(Actuator::STOP);
         return;
       }
-      Monitors.set(ActuatorNode::DOWN);
+      Monitors.set(Actuator::DOWN);
     },
     BUTTON_MONITOR_DOWN,
     true,
@@ -105,10 +107,10 @@ PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
       if (!v) {
-        Seat.set(ActuatorNode::STOP);
+        Seat.set(Actuator::STOP);
         return;
       }
-      Seat.set(ActuatorNode::UP);
+      Seat.set(Actuator::UP);
     },
     BUTTON_SEAT_UP,
     false,
@@ -117,10 +119,10 @@ PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
       if (!v) {
-        Seat.set(ActuatorNode::STOP);
+        Seat.set(Actuator::STOP);
         return;
       }
-      Seat.set(ActuatorNode::DOWN);
+      Seat.set(Actuator::DOWN);
     },
     BUTTON_SEAT_DOWN,
     false,
@@ -150,8 +152,8 @@ void onHomieEvent(const HomieEvent& event) {
     case HomieEventType::OTA_STARTED:
     case HomieEventType::ABOUT_TO_RESET:
       // Make sure to stop the actuators on OTA.
-      Seat.set(ActuatorNode::STOP);
-      Monitors.set(ActuatorNode::STOP);
+      Seat.set(Actuator::STOP);
+      Monitors.set(Actuator::STOP);
       break;
     case HomieEventType::MQTT_READY:
       // Broadcast the state of every node.
@@ -242,6 +244,8 @@ void loop() {
 #if !defined(LOG_SERIAL)
     buttonLED.update();
 #endif
+    Monitors.update();
+    Seat.update();
     Homie.loop();
   }
 }
