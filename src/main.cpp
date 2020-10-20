@@ -330,13 +330,20 @@ void setup() {
 #endif
 }
 
+// Only run the loop functions at most once per millisecond.
+unsigned long lastLoop;
+
 void loop() {
-  Homie.loop();
-  buttonMonitorUp.update();
-  buttonMonitorDown.update();
-  buttonSeatUp.update();
-  buttonSeatDown.update();
+  unsigned long time = millis();
+  if (time != lastLoop) {
+    lastLoop = time;
+    buttonMonitorUp.update();
+    buttonMonitorDown.update();
+    buttonSeatUp.update();
+    buttonSeatDown.update();
 #if !defined(LOG_SERIAL)
-  buttonLED.update();
+    buttonLED.update();
 #endif
+    Homie.loop();
+  }
 }

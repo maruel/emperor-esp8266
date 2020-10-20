@@ -3,6 +3,9 @@
 // that can be found in the LICENSE file.
 
 // Wrapper classes for ESP-8266 GPIO.
+//
+// http://arduino.esp8266.com/Arduino/versions/2.0.0/doc/reference.html
+// https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
 
 #include <Arduino.h>
 #include <Bounce2.h>
@@ -13,7 +16,7 @@
   void operator=(const TypeName &) = delete
 
 
-// Wrapper for an input pin without noise filtering.
+// Input pin without noise filtering.
 //
 // It samples the GPIO at every update (which should be called inside loop())
 // and that's it.
@@ -23,15 +26,17 @@
 class PinInRaw {
 public:
   explicit PinInRaw(int pin, bool idle) : pin(pin), idle_(idle) {
-    if (idle) {
-      // Assert not D0.
-      pinMode(pin, INPUT_PULLUP);
-    } else {
-      // GPIO16 is a bit one-off.
-      if (pin == D0) {
-        pinMode(pin, INPUT_PULLDOWN_16);
+    if (pin != A0) {
+      if (idle) {
+        // Assert not D0.
+        pinMode(pin, INPUT_PULLUP);
       } else {
-        pinMode(pin, INPUT);
+        // GPIO16 is a bit one-off.
+        if (pin == D0) {
+          pinMode(pin, INPUT_PULLDOWN_16);
+        } else {
+          pinMode(pin, INPUT);
+        }
       }
     }
     last_ = raw_get();
@@ -55,6 +60,9 @@ public:
 
 private:
   bool raw_get() {
+    if (pin == A0) {
+      return (analogRead(A0) >= 512)  != idle_;
+    }
     return digitalRead(pin) != idle_;
   }
 
@@ -64,7 +72,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PinInRaw);
 };
 
-// Wrapper for a debounced input pin.
+// Debounced input pin.
 //
 // It samples the GPIO at every update (which should be called inside loop())
 // and wait for at least <period> ms before reacting.
@@ -105,7 +113,40 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PinInDebounced);
 };
 
-// Wrapper for an output pin.
+// BounceA0 support debouncing on A0 when used as a digital pin.
+class BounceA0 : public Bounce {
+protected:
+  virtual bool readCurrentState() {
+    return analogRead(A0) >= 512;
+  }
+};
+
+// Debounced input pin for A0.
+class PinInDebouncedA0 {
+public:
+  explicit PinInDebouncedA0(bool idle, int period) : idle_(idle) {
+    debouncer_.interval(period);
+  }
+
+  // Returns the logical value.
+  bool get() {
+    return debouncer_.read() != idle_;
+  }
+
+  bool update() {
+    return debouncer_.update();
+  }
+
+  static const int pin = A0;
+
+private:
+  BounceA0 debouncer_;
+  const bool idle_;
+
+  DISALLOW_COPY_AND_ASSIGN(PinInDebouncedA0);
+};
+
+// Output pin.
 //
 // If idle is true, the values are reversed. This is useful to not cause a
 // "blip" on pins that default to pull high on boot.
@@ -138,7 +179,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PinOut);
 };
 
-// Wrapper for a PWM output pin.
+// PWM output pin.
 class PinPWM {
 public:
   explicit PinPWM(int pin) : pin(pin) {
@@ -157,7 +198,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(PinPWM);
 };
 
-// Wrapper for a PWM pin meant to be used as a buzzer using the tone() function.
+// PWM pin meant to be used as a buzzer using the tone() function.
 class PinTone {
 public:
   explicit PinTone(int pin) : pin(pin) {

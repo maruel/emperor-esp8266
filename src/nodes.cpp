@@ -47,36 +47,6 @@ String urlencode(const String& src) {
    return out;
 }
 
-// Pins.
-
-int PinPWM::set(int v) {
-  if (v <= 0) {
-    analogWrite(pin, 0);
-    value_ = 0;
-  } else if (v >= PWMRANGE) {
-    analogWrite(pin, PWMRANGE);
-    value_ = PWMRANGE;
-  } else {
-    analogWrite(pin, v);
-    value_ = v;
-  }
-  return value_;
-}
-
-int PinTone::set(int freq, int duration) {
-  if (freq <= 0) {
-    noTone(pin);
-    freq_ = 0;
-  } else if (freq >= 10000) {
-    tone(pin, freq, duration);
-    freq_ = 10000;
-  } else {
-    tone(pin, freq, duration);
-    freq_ = freq;
-  }
-  return freq_;
-}
-
 // Homie nodes.
 
 bool PinOutNode::_from_mqtt(const String &value) {
