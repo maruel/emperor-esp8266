@@ -7,6 +7,10 @@
 // http://arduino.esp8266.com/Arduino/versions/2.0.0/doc/reference.html
 // https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
 
+#ifndef PINS_ESP8266_H__
+#define PINS_ESP8266_H__
+#pragma once
+
 #include <Arduino.h>
 #include <Bounce2.h>
 
@@ -217,3 +221,5 @@ private:
 
   DISALLOW_COPY_AND_ASSIGN(PinTone);
 };
+
+#endif

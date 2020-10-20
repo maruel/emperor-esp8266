@@ -7,6 +7,10 @@
 // See https://homieiot.github.io/specification/spec-core-develop/ for the
 // MQTT convention.
 
+#ifndef NODES_H__
+#define NODES_H__
+#pragma once
+
 #include "pins_esp8266.h"
 
 #include <Homie.h>
@@ -189,3 +193,5 @@ private:
 
   DISALLOW_COPY_AND_ASSIGN(PinToneNode);
 };
+
+#endif

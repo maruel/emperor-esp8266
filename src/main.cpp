@@ -42,6 +42,7 @@
 #include <Homie.h>
 #include <ESPAsyncWebServer.h>
 
+#include "actuator.h"
 #include "nodes.h"
 
 // Enable to start the web server. Uses more memory.
@@ -62,109 +63,6 @@ const int ACTUATOR_MONITOR_UP = D7;   // GPIO13; Idles High
 const int ACTUATOR_MONITOR_DOWN = D2; // GPIO4 ; Idles High
 const int LED_OUT = D4;               // GPIO2 ; Pull Up; Also onboard LED
 
-// Homie node to control a bidirectional actuator.
-//
-// Unlike a normal motor, the actuator can only run each way for a certain
-// amount of time, as it eventually is fully extended or retracted.
-//
-// See https://en.wikipedia.org/wiki/Actuator
-//
-// Each relay output can idle on different values, depending on the GPIO used.
-class Actuator : public HomieNode {
-public:
-  enum Direction {
-    STOP = 0,
-    UP = 1,
-    DOWN = 2,
-  };
-
-  static const char *dirToStr(Direction d) {
-    switch (d) {
-    case STOP:
-      return "stop";
-    case UP:
-      return "up";
-    case DOWN:
-      return "down";
-    default:
-      return "<invalid direction>";
-    }
-  }
-
-  Actuator(const char *name, int left, bool idleleft, int right, bool idleright)
-      : HomieNode(name, name, "actuator"),
-        left_(left, idleleft), right_(right, idleright) {
-    advertise("direction")
-        .settable([&](const HomieRange &range, const String &value) {
-          return _from_mqtt(value);
-        });
-    // datatype = enum
-    // format = "stop,up,down"
-  }
-
-  void init() {
-    setProperty("direction").send("stop");
-  }
-
-  void set(Direction d) {
-    Homie.getLogger() << getId() << ".set(" << dirToStr(d) << ")" << endl;
-    if (left_.get() == right_.get()) {
-      if (d == UP) {
-        set_relays(true, false);
-        setProperty("direction").send("up");
-        return;
-      }
-      if (d == DOWN) {
-        set_relays(false, true);
-        setProperty("direction").send("down");
-        return;
-      }
-    } else if (d != STOP) {
-      Homie.getLogger() << "  value ignored due to different pin values" << endl;
-    }
-    set_relays(false, false);
-    setProperty("direction").send("stop");
-  }
-
-private:
-  void set_relays(bool left, bool right) {
-    Homie.getLogger() << getId() << ".set_relays(" << left << ", " << right << ")" << endl;
-    left_.set(left);
-    right_.set(right);
-  }
-
-  bool _from_mqtt(const String &value) {
-    Homie.getLogger() << getId() << "._from_mqtt(" << value << ")" << endl;
-    // If we get an action and we were not idle, go idle. This is to
-    // prevent quick back and forth, which would be harsh on the actuator.
-    // Better be safe than sorry.
-    if (left_.get() == right_.get()) {
-      if (value.equals("up")) {
-        set_relays(true, false);
-        setProperty("direction").send(value);
-        return true;
-      }
-      if (value.equals("down")) {
-        set_relays(false, true);
-        setProperty("direction").send(value);
-        return true;
-      }
-      // Ignore bad values and reset to stop. So sending garbagge still
-      // stops the actuator.
-      if (!value.equals("stop")) {
-        Homie.getLogger() << "  bad value" << endl;
-      }
-    } else if (!value.equals("stop")) {
-      Homie.getLogger() << "  value ignored due to different pin values" << endl;
-    }
-    set_relays(false, false);
-    setProperty("direction").send("stop");
-    return true;
-  }
-
-  PinOut left_;
-  PinOut right_;
-};
 
 //
 // Homie nodes accessible through MQTT.
@@ -173,20 +71,20 @@ private:
 
 // Outputs.
 PinOutNode LED("led", LED_OUT, true, NULL);
-Actuator Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true);
-Actuator Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true);
+ActuatorNode Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true);
+ActuatorNode Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true);
 
-const int period = 50;
 
 // Inputs. All of them idles High, so they are active when Low.
+const int period = 50;
 PinInNode buttonMonitorUp(
     "button_monitor_up",
     [](bool v) {
       if (!v) {
-        Monitors.set(Actuator::STOP);
+        Monitors.set(ActuatorNode::STOP);
         return;
       }
-      Monitors.set(Actuator::UP);
+      Monitors.set(ActuatorNode::UP);
     },
     BUTTON_MONITOR_UP,
     true,
@@ -195,10 +93,10 @@ PinInNode buttonMonitorDown(
     "button_monitor_down",
     [](bool v) {
       if (!v) {
-        Monitors.set(Actuator::STOP);
+        Monitors.set(ActuatorNode::STOP);
         return;
       }
-      Monitors.set(Actuator::DOWN);
+      Monitors.set(ActuatorNode::DOWN);
     },
     BUTTON_MONITOR_DOWN,
     true,
@@ -207,10 +105,10 @@ PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
       if (!v) {
-        Seat.set(Actuator::STOP);
+        Seat.set(ActuatorNode::STOP);
         return;
       }
-      Seat.set(Actuator::UP);
+      Seat.set(ActuatorNode::UP);
     },
     BUTTON_SEAT_UP,
     false,
@@ -219,10 +117,10 @@ PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
       if (!v) {
-        Seat.set(Actuator::STOP);
+        Seat.set(ActuatorNode::STOP);
         return;
       }
-      Seat.set(Actuator::DOWN);
+      Seat.set(ActuatorNode::DOWN);
     },
     BUTTON_SEAT_DOWN,
     false,
@@ -252,8 +150,8 @@ void onHomieEvent(const HomieEvent& event) {
     case HomieEventType::OTA_STARTED:
     case HomieEventType::ABOUT_TO_RESET:
       // Make sure to stop the actuators on OTA.
-      Seat.set(Actuator::STOP);
-      Monitors.set(Actuator::STOP);
+      Seat.set(ActuatorNode::STOP);
+      Monitors.set(ActuatorNode::STOP);
       break;
     case HomieEventType::MQTT_READY:
       // Broadcast the state of every node.
