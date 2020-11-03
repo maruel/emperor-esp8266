@@ -39,7 +39,7 @@ echo "- Activating virtualenv"
 source ./.venv/bin/activate
 
 echo "- Installing requirements"
-pip3 install $QUIET -r requirements.txt
+pip3 install $QUIET -U -r requirements.txt
 
 echo ""
 echo "Congratulations! Everything is inside ./.venv/"

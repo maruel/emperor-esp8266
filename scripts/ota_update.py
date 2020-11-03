@@ -12,118 +12,139 @@ import os
 import subprocess
 import sys
 
+import attr
 import paho.mqtt.client as mqtt
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def _on_connect(client, userdata, flags, rc):
-  """On CONNACK."""
-  if rc != 0:
-    logging.warning('Connection Failed with result code {}'.format(rc))
-    client.disconnect()
-  else:
-    logging.debug('Connected with result code {}'.format(rc))
-  client.subscribe('{base_topic}{device_id}/$online'.format(**userdata))
-  logging.debug('Waiting for device to come online...')
+@attr.s
+class Updater(object):
+  # Required arguments:
+  base_topic = attr.ib(type=str)
+  device_id = attr.ib(type=str)
+  firmware = attr.ib(type=str)
 
+  # Automatically calculated:
+  md5 = attr.ib(type=str, init=False)
 
-def _on_message(client, userdata, msg):
-  """On a PUBLISH message."""
-  payload = msg.payload.decode('utf-8')
-  if msg.topic.endswith('$implementation/ota/status'):
-    status = int(payload.split()[0])
-    if userdata.get('published'):
-      if status == 206: # In progress
-        # State in progress, print progress bar.
-        progress, total = [int(x) for x in payload.split()[1].split('/')]
-        bar_width = 30
-        bar = int(bar_width*(progress/total))
-        logging.info('\r[', '+'*bar, ' '*(bar_width-bar), '] ', payload.split()[1], end='', sep='')
-        if progress == total:
-            print()
-        sys.stdout.flush()
-      elif status == 304: # Not modified
-        logging.info('Device firmware already up to date with md5 checksum: {}'.format(userdata.get('md5')))
+  # From the device:
+  published = attr.ib(type=bool, default=False)
+  ota_enabled = attr.ib(type=bool, default=False)
+  old_md5 = attr.ib(type=str, default='')
+
+  def __attr_post_init__(self):
+    """Calculate firmware md5."""
+    self.md5 = hashlib.md5(self.firmware).hexdigest()
+
+  def setup_and_connect(self, c, host, port):
+    """Setups and start the process."""
+    # Convert hooks to methods:
+    c.user_data_set(self)
+    c.on_connect = lambda client, userdata, flags, rc: userdata._on_connect(
+        client, flags, rc)
+    c.on_message = lambda client, userdata, msg: userdata._on_message(
+        client, msg)
+    logging.info('Connecting to mqtt broker {} on port {}'.format(host, port))
+    c.connect(host, port, 60)
+    # Blocking call that processes network traffic, dispatches callbacks and
+    # handles reconnecting.
+    c.loop_forever()
+
+  @property
+  def topic(self):
+    return self.base_topic + self.device_id
+
+  def _on_connect(self, client, flags, rc):
+    """On CONNACK."""
+    if rc != 0:
+      logging.warning('Connection Failed with result code {}'.format(rc))
+      client.disconnect()
+    logging.debug('Subscribing to {}/$online'.format(self.topic))
+    client.subscribe('{}/$online'.format(self.topic))
+    logging.info(
+        'Waiting for device {} to come online...'.format(self.device_id))
+
+  def _on_message(self, client, msg):
+    """On a PUBLISH message."""
+    payload = msg.payload.decode('utf-8')
+    if msg.topic.endswith('$implementation/ota/status'):
+      status = int(payload.split()[0])
+      if self.published:
+        if status == 206: # In progress
+          # State in progress, print progress bar.
+          progress, total = [int(x) for x in payload.split()[1].split('/')]
+          bar_width = 30
+          bar = int(bar_width*(progress/total))
+          logging.info('\r[', '+'*bar, ' '*(bar_width-bar), '] ', payload.split()[1], end='', sep='')
+          if progress == total:
+              print()
+          sys.stdout.flush()
+        elif status == 304: # Not modified
+          logging.info(
+              'Device firmware already up to date with md5 checksum: {}'.format(
+                self.md5))
+          client.disconnect()
+        elif status == 403: # Forbidden
+          logging.error('Device ota disabled, aborting...')
+          client.disconnect()
+
+    elif msg.topic.endswith('$fw/checksum'):
+      if self.published:
+        if payload == self.md5:
+          logging.info('Device back online. Update Successful!')
+        else:
+          logging.error(
+              'Expecting checksum {}, got {}, update failed!'.format(
+                self.md5, payload))
+        # We're done!
         client.disconnect()
-      elif status == 403: # Forbidden
+      else:
+        if payload != self.md5:
+          # Save old md5 for comparison with new firmware.
+          self.old_md5 = payload
+        else:
+          logging.info(
+              'Device firmware already up to date with md5 checksum: {}'.format(
+                payload))
+          client.disconnect()
+
+    elif msg.topic.endswith('ota/enabled'):
+      if payload == 'true':
+        self.ota_enabled = True
+      else:
         logging.error('Device ota disabled, aborting...')
         client.disconnect()
 
-  elif msg.topic.endswith('$fw/checksum'):
-    if userdata.get('published'):
-      if payload == userdata.get('md5'):
-        logging.info('Device back online. Update Successful!')
-      else:
-        logging.error('Expecting checksum {}, got {}, update failed!'.format(userdata.get('md5'), payload))
-      # We're done!
-      client.disconnect()
-    else:
-      if payload != userdata.get('md5'):
-        # Save old md5 for comparison with new firmware.
-        userdata.update({'old_md5': payload})
-      else:
-        logging.info('Device firmware already up to date with md5 checksum: {}'.format(payload))
-        client.disconnect()
+    elif msg.topic.endswith('$online'):
+      if payload == 'false':
+        logging.error('Device is offline.')
+        return
+      # Subscribing in on_connect() means that if we lose the connection and
+      # reconnect then subscriptions will be renewed.
+      client.subscribe('{}/$implementation/ota/status'.format(self.topic))
+      client.subscribe('{}/$implementation/ota/enabled'.format(self.topic))
+      client.subscribe('{}/$fw/#'.format(self.topic))
+      # Wait for device info to come in and invoke the on_message callback where
+      # update will continue.
+      logging.debug('Waiting for device info...')
 
-  elif msg.topic.endswith('ota/enabled'):
-    if payload == 'true':
-      userdata.update({'ota_enabled': True})
-    else:
-      logging.error('Device ota disabled, aborting...')
-      client.disconnect()
-
-  elif msg.topic.endswith('$online'):
-    if payload == 'false':
-      return
-    # Calculate firmware md5.
-    firmware_md5 = hashlib.md5(userdata['firmware']).hexdigest()
-    userdata.update({'md5': firmware_md5})
-    # Subscribing in on_connect() means that if we lose the connection and
-    # reconnect then subscriptions will be renewed.
-    client.subscribe('{base_topic}{device_id}/$implementation/ota/status'.format(**userdata))
-    client.subscribe('{base_topic}{device_id}/$implementation/ota/enabled'.format(**userdata))
-    client.subscribe('{base_topic}{device_id}/$fw/#'.format(**userdata))
-    # Wait for device info to come in and invoke the on_message callback where
-    # update will continue.
-    logging.debug('Waiting for device info...')
-
-  if (not userdata.get('published')
-      and userdata.get('ota_enabled')
-      and 'old_md5' in userdata
-      and userdata.get('md5') != userdata.get('old_md5')):
-    # Push the firmware binary.
-    userdata.update({'published': True})
-    topic = '{base_topic}{device_id}/$implementation/ota/firmware/{md5}'.format(**userdata)
-    logging.debug('Publishing new firmware with checksum {}'.format(userdata.get('md5')))
-    client.publish(topic, userdata['firmware'])
+    if (not self.published and self.ota_enabled and
+        self.old_md5 and self.md5 != self.old_md5):
+      logging.debug('Publishing new firmware with checksum {}'.format(self.md5))
+      self.published = True
+      topic = '{}/$implementation/ota/firmware/{}'.format(self.topic, self.md5)
+      client.publish(topic, self.firmware)
 
 
-def do_ota(host, port, username, password, ca_cert, base_topic, device_id, firmware):
+def get_mqtt_client(host, port, username, password, ca_cert):
+  """Returns a MQTT client."""
   client = mqtt.Client()
-  client.on_connect = _on_connect
-  client.on_message = _on_message
   if username and password:
     client.username_pw_set(username, password)
   if ca_cert is not None:
     client.tls_set(ca_certs=ca_cert)
-  # Save data to be used in the callbacks.
-  client.user_data_set(
-      {
-        'base_topic': base_topic,
-        'device_id': device_id,
-        'firmware': firmware,
-      })
-  logging.info('Connecting to mqtt broker {} on port {}'.format(host, port))
-  client.connect(host, port, 60)
-  # Blocking call that processes network traffic, dispatches callbacks and handles reconnecting.
-  client.loop_forever()
-
-
-def _base_topic_arg(s):
-  """Ensures base topic always ends with a '/'."""
-  s = str(s)
-  return s if s.endswith('/') else s + '/'
+  return client
 
 
 def main():
@@ -146,8 +167,10 @@ def main():
   parser.add_argument(
       '--password',
       help='password used to authenticate with the MQTT broker')
+  # Ensures base topic always ends with a '/'.
   parser.add_argument(
-      '--base-topic', type=_base_topic_arg,
+      '--base-topic',
+      type=lambda s: s if s.endswith('/') else s + '/',
       metavar='homie/',
       default='homie/',
       help='base topic of the homie devices')
@@ -161,16 +184,25 @@ def main():
   parser.add_argument(
       '--tls-cacert',
       help='CA certificate bundle used to validate TLS connections. If set, TLS will be enabled on the broker connection')
+  # Behavior:
   parser.add_argument(
       '--no-build', action='store_true', help='Do not build first')
+  parser.add_argument(
+      '--query-only',
+      action='store_true',
+      help='Query the version but do not upgrade')
   args = parser.parse_args()
   logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
   if not args.no_build:
     subprocess.check_call(['pio', 'run'], cwd=os.path.dirname(THIS_DIR))
   with open(args.firmware, 'rb') as f:
     data = f.read()
-  do_ota(args.host, args.port, args.username, args.password, args.tls_cacert,
-      args.base_topic, args.device_id, data)
+
+  c = get_mqtt_client(
+      args.host, args.port, args.username, args.password, args.tls_cacert)
+  u = Updater(
+      base_topic=args.base_topic, device_id=args.device_id, firmware=data)
+  u.setup_and_connect(c, args.host, args.port)
   return 0
 
 

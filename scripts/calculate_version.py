@@ -57,10 +57,11 @@ def calculate_version(tag):
     if branch != 'HEAD':
       tag = branch
   version = '%s-%s' % (pseudo_revision, mergebase[:7])
-  if not pristine:
-    version += '-' + getpass.getuser()
-  if tag:
-    version += '-' + tag
+  # 25 characters is already too much.
+  #if not pristine:
+  #  version += '-' + getpass.getuser()
+  #if tag:
+  #  version += '-' + tag
   return version
 
 

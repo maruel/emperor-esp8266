@@ -19,6 +19,13 @@ if [ ! -f data/homie/config.json ]; then
   exit 1
 fi
 
+# Manually erase the file, since the cache is not updated properly on file
+# change.
+# TODO(maruel): Doesn't seem like it's enough.
+if [ -f .pio/build/d1_mini/spiffs.bin ]; then
+  rm .pio/build/d1_mini/spiffs.bin
+fi
+
 echo "- Building code"
 pio run -s
 echo "- Building data"
