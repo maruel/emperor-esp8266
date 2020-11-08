@@ -49,29 +49,20 @@ def get_pseudo_version(cur, upstream):
   return 'Unknown', mergebase
 
 
-def calculate_version(tag):
+def calculate_version():
   pseudo_revision, mergebase = get_pseudo_version('HEAD', 'origin/master')
   pristine = is_pristine(mergebase)
-  if not pristine and not tag:
-    branch = git(['rev-parse', '--abbrev-ref', 'HEAD']).strip()
-    if branch != 'HEAD':
-      tag = branch
   version = '%s-%s' % (pseudo_revision, mergebase[:7])
-  # 25 characters is already too much.
-  #if not pristine:
-  #  version += '-' + getpass.getuser()
-  #if tag:
-  #  version += '-' + tag
+  if not pristine:
+    version += '-mod'
   return version
 
 
 def main():
   parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__)
-  parser.add_argument(
-      '-t', '--tag', help='Tag to attach to a tainted version')
   args = parser.parse_args()
   os.chdir(git(['rev-parse', '--show-toplevel']))
-  print(calculate_version(args.tag))
+  print(calculate_version())
   return 0
 
 
