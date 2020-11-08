@@ -3,7 +3,12 @@
 # Use of this source code is governed under the Apache License, Version 2.0
 # that can be found in the LICENSE file.
 
-"""Updates a homie device via MQTT."""
+"""Updates a homie device firmware via MQTT."""
+
+# See
+# https://homieiot.github.io/homie-esp8266/docs/3.0.0/others/ota-configuration-updates/
+# and
+# https://pypi.org/project/paho-mqtt/
 
 import argparse
 import hashlib
@@ -23,7 +28,7 @@ class Updater(object):
   # Required arguments:
   base_topic = attr.ib(type=str)
   device_id = attr.ib(type=str)
-  firmware = attr.ib(type=str)
+  firmware = attr.ib(type=bytes)
 
   # Automatically calculated:
   md5 = attr.ib(type=str, init=False)
@@ -63,7 +68,8 @@ class Updater(object):
   def _publish(self, client, topic, payload):
     t = self.topic + '/' + topic
     logging.debug('publish(%s, %d bytes)', t, len(payload))
-    client.publish(t, payload)
+    resp = client.publish(t, payload)
+    logging.debug('-> sending %s', resp.mid)
 
   def _on_connect(self, client, flags, rc):
     """On CONNACK."""
@@ -88,9 +94,9 @@ class Updater(object):
           progress, total = [int(x) for x in payload.split()[1].split('/')]
           bar_width = 30
           bar = int(bar_width*(progress/total))
-          logging.info('\r[', '+'*bar, ' '*(bar_width-bar), '] ', payload.split()[1], end='', sep='')
+          print('\r[', '+'*bar, ' '*(bar_width-bar), '] ', payload.split()[1], end='', sep='')
           if progress == total:
-              print()
+              print('')
           sys.stdout.flush()
         elif status == 304: # Not modified
           logging.info(

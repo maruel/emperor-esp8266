@@ -3,7 +3,10 @@
 # Use of this source code is governed under the Apache License, Version 2.0
 # that can be found in the LICENSE file.
 
-"""Reboot a homie device via MQTT."""
+"""Updates a homie device config via MQTT."""
+
+# See
+# https://homieiot.github.io/homie-esp8266/docs/3.0.0/others/ota-configuration-updates/
 
 import argparse
 import hashlib
@@ -19,12 +22,12 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @attr.s
-class Rebooter(object):
+class Setter(object):
   # Required arguments:
   base_topic = attr.ib(type=str)
   device_id = attr.ib(type=str)
 
-  reboot_sent = attr.ib(type=bool, default=False)
+  config_sent = attr.ib(type=bool, default=False)
 
   def setup_and_connect(self, c, host, port):
     """Setups and start the process."""
@@ -136,8 +139,8 @@ def main():
   logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
   c = get_mqtt_client(
       args.host, args.port, args.username, args.password, args.tls_cacert)
-  r = Rebooter(base_topic=args.base_topic, device_id=args.device_id)
-  r.setup_and_connect(c, args.host, args.port)
+  s = Setter(base_topic=args.base_topic, device_id=args.device_id)
+  s.setup_and_connect(c, args.host, args.port)
   return 0
 
 
