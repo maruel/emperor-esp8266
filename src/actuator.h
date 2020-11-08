@@ -43,6 +43,7 @@ public:
     return dir_;
   }
 
+  // set sets the new direction. Returns the actual direction choosen.
   Direction set(Direction d) {
     if (dir_ == STOP) {
       if (d == UP) {
@@ -59,14 +60,13 @@ public:
     return dir_;
   }
 
+  // update updates the actuator state based on time. It shall be called inside
+  // loop().
   bool update() {
-    if (dir_ != STOP && delay_ != 0) {
-      // TODO(maruel): Wrap every 49.7 days.
-      unsigned long since = millis() - last_;
-      if (since > delay_) {
-        set(STOP);
-        return true;
-      }
+    // TODO(maruel): Wrap every 49.7 days.
+    if (dir_ != STOP && delay_ != 0 && (millis() - last_) > delay_) {
+      set(STOP);
+      return true;
     }
     return false;
   }
@@ -108,31 +108,34 @@ public:
     // format = "stop,up,down"
   }
 
+  // init initializes the state, including both the LED and the MQTT topic.
   void init() {
     set(Actuator::STOP);
-    setProperty("direction").send("stop");
   }
 
+  // set is the high level function to set the direction and updates the MQTT
+  // topic if needed.
   Actuator::Direction set(Actuator::Direction d) {
-    // Homie.getLogger() << getId() << ".set(" << dirToStr(d) << ")" << endl;
     Actuator::Direction actual = actuator_.set(d);
-    if (actual != d) {
-      to_mqtt(actual);
-    } else {
-      //Homie.getLogger() << "  value ignored due to different pin values" << endl;
-    }
+    _updateLED(actual);
+    _to_mqtt(actual);
     return actual;
   }
 
+  // update gets the current value from the underlying actuator, and updates the
+  // MQTT topic if needed.
   bool update() {
     if (actuator_.update()) {
-      to_mqtt(actuator_.get());
+      Actuator::Direction actual = actuator_.get();
+      _updateLED(actual);
+      _to_mqtt(actual);
       return true;
     }
     return false;
   }
 
 private:
+  // _from_mqtt is called when an incoming MQTT message is received.
   bool _from_mqtt(const String &value) {
     Homie.getLogger() << getId() << "._from_mqtt(" << value << ")" << endl;
     // If we get an action and we were not idle, go idle. This is to
@@ -140,13 +143,11 @@ private:
     // Better be safe than sorry.
     if (actuator_.get() == Actuator::STOP) {
       if (value.equals("up")) {
-        actuator_.set(Actuator::UP);
-        setProperty("direction").send(value);
+        set(Actuator::UP);
         return true;
       }
       if (value.equals("down")) {
-        actuator_.set(Actuator::DOWN);
-        setProperty("direction").send(value);
+        set(Actuator::DOWN);
         return true;
       }
       // Ignore bad values and reset to stop. So sending garbage still
@@ -155,24 +156,35 @@ private:
         Homie.getLogger() << "  bad value" << endl;
       }
     } else if (!value.equals("stop")) {
-      Homie.getLogger() << "  value ignored due to different pin values" << endl;
+      Homie.getLogger() << "  value ignored due to actuator not being stopped" << endl;
     }
-    actuator_.set(Actuator::STOP);
-    setProperty("direction").send("stop");
+    set(Actuator::STOP);
     return true;
   }
 
-  void to_mqtt(Actuator::Direction d) {
+  // _to_mqtt is to be called when we need to change the value.
+  void _to_mqtt(Actuator::Direction d) {
+    const char * v;
     switch (d) {
     case Actuator::UP:
-      setProperty("direction").send("up");
+      v = "up";
       break;
     case Actuator::DOWN:
-      setProperty("direction").send("down");
+      v = "down";
       break;
     case Actuator::STOP:
-      setProperty("direction").send("stop");
+      v = "stop";
       break;
+    }
+    setProperty("direction").send(v);
+  }
+
+  // _updateLED updates the LED.
+  void _updateLED(Actuator::Direction d) {
+    if (d != Actuator::STOP) {
+      HomieInternals::Interface::get().getBlinker().start(0.3);
+    } else {
+      HomieInternals::Interface::get().getBlinker().stop();
     }
   }
 

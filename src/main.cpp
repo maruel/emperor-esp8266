@@ -140,14 +140,16 @@ PinInNode buttonLED(
 #endif
 
 #if defined(USE_WEB_SERVER)
-// Web server to serve the MQTT web UI. This is NOT the web server when in
-// configuration mode.
+// Web server to serve our custom MQTT web UI. This is NOT the web server when
+// in configuration mode.
+// TODO(maruel): There's no way to update the files over OTA at the moment, this
+// requires using flash_all.sh.
 AsyncWebServer httpSrv(80);
 #endif
 
 void onHomieEvent(const HomieEvent& event) {
 	// See
-  // https://homieiot.github.io/homie-esp8266/docs/2.0.0/advanced-usage/events/
+  // https://homieiot.github.io/homie-esp8266/docs/3.0.0/advanced-usage/events/
   switch(event.type) {
     case HomieEventType::OTA_STARTED:
     case HomieEventType::ABOUT_TO_RESET:

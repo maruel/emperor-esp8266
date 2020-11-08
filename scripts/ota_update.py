@@ -47,7 +47,7 @@ class Updater(object):
   def __attrs_post_init__(self):
     """Calculate firmware md5."""
     self.md5 = hashlib.md5(self.firmware).hexdigest()
-    self.name, self.version, self.branch = firmware_parser.extract_metadata(
+    self.name, self.version, self.brand = firmware_parser.extract_metadata(
         self.firmware)
 
   def setup_and_connect(self, c, host, port):
@@ -58,7 +58,7 @@ class Updater(object):
         client, flags, rc)
     c.on_message = lambda client, userdata, msg: userdata._on_message(
         client, msg)
-    print('Connecting to MQTT broker {} on port {}'.format(host, port))
+    print('Connecting to MQTT broker: {}:{}'.format(host, port))
     c.connect(host, port, 60)
     # Blocking call that processes network traffic, dispatches callbacks and
     # handles reconnecting.
@@ -85,7 +85,7 @@ class Updater(object):
       print('ERROR: MQTT connection failed with result code {}'.format(rc))
       client.disconnect()
     self._subscribe(client, '$state')
-    logging.info('Waiting for device %s to come online...', self.device_id)
+    print('Looking for device: %s'.format(self.device_id))
 
   def _on_message(self, client, msg):
     """On a PUBLISH message."""
