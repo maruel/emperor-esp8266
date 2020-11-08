@@ -14,11 +14,14 @@ import argparse
 import hashlib
 import logging
 import os
+import shutil
 import subprocess
 import sys
 
 import attr
 import paho.mqtt.client as mqtt
+
+import firmware_parser
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,6 +35,9 @@ class Updater(object):
 
   # Automatically calculated:
   md5 = attr.ib(type=str, init=False)
+  name = attr.ib(type=str, init=False)
+  version = attr.ib(type=str, init=False)
+  brand = attr.ib(type=str, init=False)
 
   # From the device:
   published = attr.ib(type=bool, default=False)
@@ -41,6 +47,8 @@ class Updater(object):
   def __attrs_post_init__(self):
     """Calculate firmware md5."""
     self.md5 = hashlib.md5(self.firmware).hexdigest()
+    self.name, self.version, self.branch = firmware_parser.extract_metadata(
+        self.firmware)
 
   def setup_and_connect(self, c, host, port):
     """Setups and start the process."""
@@ -153,6 +161,8 @@ class Updater(object):
 
     if (not self.published and self.ota_enabled and
         self.old_md5 and self.md5 != self.old_md5):
+      print('Flashing firmware {} / {} / version:{} / checksum:{}'.format(
+        self.name, self.brand, self.version, self.md5))
       topic = '$implementation/ota/firmware/{}'.format(self.md5)
       self._publish(client, topic, self.firmware)
       logging.debug('Done, waiting for device to react')
@@ -212,13 +222,31 @@ def main():
   parser.add_argument(
       '--no-build', action='store_true', help='Do not build first')
   parser.add_argument(
-      '--query-only',
-      action='store_true',
-      help='Query the version but do not upgrade')
+      '--clean-build', action='store_true',
+      help='Clean the build cache first; invalidate checksum')
   args = parser.parse_args()
   logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING)
   if not args.no_build:
-    subprocess.check_call(['pio', 'run'], cwd=os.path.dirname(THIS_DIR))
+    cwd = os.path.dirname(THIS_DIR)
+    if args.clean_build:
+      logging.info('Removing files')
+      build_cache = os.path.join(cwd, '.pio', 'build_cache')
+      if os.path.exists(build_cache):
+        shutil.rmtree(build_cache)
+      if os.path.exists(args.firmware):
+        os.remove(args.firmware)
+    try:
+      subprocess.check_output(
+          ['pio', 'run', '-s'], cwd=cwd, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError:
+      # If it fails, build a second time but without redirection. The reason is
+      # that it will skip on unnecessary warnings, only printing the actual
+      # compile units that failed to compile. This should be reasonably fast
+      # with incremental compilation.
+      return subprocess.call(['pio', 'run', '-s'], cwd=cwd)
+  elif args.clean_build:
+    parser.error('--clean-build cannot be used with --no-build')
+
   with open(args.firmware, 'rb') as f:
     data = f.read()
 

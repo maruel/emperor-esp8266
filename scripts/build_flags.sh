@@ -3,10 +3,11 @@
 # Use of this source code is governed under the Apache License, Version 2.0
 # that can be found in the LICENSE file.
 
-set -eu
+set -e
 
 cd "$(dirname $0)"
 
+# Automatically calculated firmware version.
 echo -n " -DGIT_REV="'\"'"$(./calculate_version.py)"'\"'
 
 # Enable serial logging:
@@ -17,4 +18,5 @@ echo -n " -DGIT_REV="'\"'"$(./calculate_version.py)"'\"'
 #echo " -DASYNC_TCP_SSL_ENABLED=1"
 #echo " -DPIO_FRAMEWORK_ARDUINO_LWIP2_HIGHER_BANDWIDTH"
 
-echo ""
+# Add whatever variable set, makes things simpler:
+echo " ${ESP8266_FLAGS}"
