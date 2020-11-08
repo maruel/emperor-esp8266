@@ -33,6 +33,9 @@ class Updater(object):
   device_id = attr.ib(type=str)
   firmware = attr.ib(type=bytes)
 
+  # Set when the firmware binary was uploaded via MQTT.
+  firmware_published = attr.ib(type=bool, default=False)
+
   # Automatically calculated:
   md5 = attr.ib(type=str, init=False)
   name = attr.ib(type=str, init=False)
@@ -40,7 +43,6 @@ class Updater(object):
   brand = attr.ib(type=str, init=False)
 
   # From the device:
-  published = attr.ib(type=bool, default=False)
   ota_enabled = attr.ib(type=bool, default=False)
   old_md5 = attr.ib(type=str, default='')
 
@@ -96,7 +98,7 @@ class Updater(object):
 
     if topic == '$implementation/ota/status':
       status = int(payload.split()[0])
-      if self.published:
+      if self.firmware_published:
         if status == 206: # In progress
           # State in progress, print progress bar.
           progress, total = [int(x) for x in payload.split()[1].split('/')]
@@ -116,7 +118,7 @@ class Updater(object):
           client.disconnect()
 
     elif topic == '$fw/checksum':
-      if self.published:
+      if self.firmware_published:
         if payload == self.md5:
           print('Device back online. Update Successful!')
         else:
@@ -159,14 +161,14 @@ class Updater(object):
       # update will continue.
       logging.debug('Waiting for device info...')
 
-    if (not self.published and self.ota_enabled and
+    if (not self.firmware_published and self.ota_enabled and
         self.old_md5 and self.md5 != self.old_md5):
       print('Flashing firmware {} / {} / version:{} / checksum:{}'.format(
         self.name, self.brand, self.version, self.md5))
       topic = '$implementation/ota/firmware/{}'.format(self.md5)
       self._publish(client, topic, self.firmware)
       logging.debug('Done, waiting for device to react')
-      self.published = True
+      self.firmware_published = True
 
 
 def get_mqtt_client(host, port, username, password, ca_cert):
