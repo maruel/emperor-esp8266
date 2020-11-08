@@ -50,7 +50,7 @@ class Updater(object):
         client, flags, rc)
     c.on_message = lambda client, userdata, msg: userdata._on_message(
         client, msg)
-    logging.info('Connecting to mqtt broker %s on port %s', host, port)
+    print('Connecting to MQTT broker {} on port {}'.format(host, port))
     c.connect(host, port, 60)
     # Blocking call that processes network traffic, dispatches callbacks and
     # handles reconnecting.
@@ -74,7 +74,7 @@ class Updater(object):
   def _on_connect(self, client, flags, rc):
     """On CONNACK."""
     if rc != 0:
-      logging.warning('Connection Failed with result code %s', rc)
+      print('ERROR: MQTT connection failed with result code {}'.format(rc))
       client.disconnect()
     self._subscribe(client, '$state')
     logging.info('Waiting for device %s to come online...', self.device_id)
@@ -96,25 +96,25 @@ class Updater(object):
           bar = int(bar_width*(progress/total))
           print('\r[', '+'*bar, ' '*(bar_width-bar), '] ', payload.split()[1], end='', sep='')
           if progress == total:
-              print('')
+              print('\nOTA completed. Waiting for reboot')
           sys.stdout.flush()
         elif status == 304: # Not modified
-          logging.info(
-              'Device firmware already up to date with md5 checksum: %s',
-              self.md5)
+          print(
+              'Device firmware already up to date with md5 checksum: {}'.format(
+                self.md5))
           client.disconnect()
         elif status == 403: # Forbidden
-          logging.error('Device ota disabled, aborting...')
+          print('ERROR: Device OTA disabled, aborting...')
           client.disconnect()
 
     elif topic == '$fw/checksum':
       if self.published:
         if payload == self.md5:
-          logging.info('Device back online. Update Successful!')
+          print('Device back online. Update Successful!')
         else:
-          logging.error(
-              'Expecting checksum %s, got %s, update failed!', self.md5,
-              payload)
+          print(
+              'ERROR: Expecting checksum {}, got {}, update failed!'.format(
+                self.md5, payload))
         # We're done!
         client.disconnect()
       else:
@@ -122,21 +122,21 @@ class Updater(object):
           logging.info('Received current firmware checksum: %s', payload)
           self.old_md5 = payload
         else:
-          logging.info(
-              'Device firmware already up to date with md5 checksum: %s',
-              payload)
+          print(
+              'Device firmware already up to date with md5 checksum: {}'.format(
+                self.md5))
           client.disconnect()
 
     elif topic == '$implementation/ota/enabled':
       if payload == 'true':
         self.ota_enabled = True
       else:
-        logging.error('Device ota disabled, aborting...')
+        print('ERROR: Device OTA disabled, aborting...')
         client.disconnect()
 
     elif topic == '$state':
       if payload == 'lost':
-        logging.error('Device is offline.')
+        print('ERROR: Device is offline.')
         client.disconnect()
         return
       if payload == 'init':
@@ -153,7 +153,6 @@ class Updater(object):
 
     if (not self.published and self.ota_enabled and
         self.old_md5 and self.md5 != self.old_md5):
-      #logging.debug('Publishing new firmware with checksum %s', self.md5)
       topic = '$implementation/ota/firmware/{}'.format(self.md5)
       self._publish(client, topic, self.firmware)
       logging.debug('Done, waiting for device to react')
@@ -217,7 +216,7 @@ def main():
       action='store_true',
       help='Query the version but do not upgrade')
   args = parser.parse_args()
-  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING)
   if not args.no_build:
     subprocess.check_call(['pio', 'run'], cwd=os.path.dirname(THIS_DIR))
   with open(args.firmware, 'rb') as f:
