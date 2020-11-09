@@ -70,12 +70,10 @@ const int LED_OUT = D4;               // GPIO2 ; Pull Up; Also onboard LED
 
 
 // Outputs.
-// Stop after 10 seconds.
-const int runTime = 10000;
 PinOutNode LED("led", LED_OUT, true, NULL);
-ActuatorNode Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true, runTime, runTime);
+ActuatorNode Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true, 10000, 10000);
 // The delay will have to be adjusted based on the monitor weight.
-ActuatorNode Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true, 5500, 4000);
+ActuatorNode Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true, 5400, 4000);
 
 
 // Inputs. All of them idles High, so they are active when Low.
@@ -94,13 +92,25 @@ PinInNode buttonMonitorDown(
     period);
 PinInNode buttonSeatUp(
     "button_seat_up",
-    [](bool v) { if (!v) { Seat.set(Actuator::UP); } },
+    [](bool v) {
+      if (!v) {
+        Seat.set(Actuator::UP);
+      } else {
+        Seat.set(Actuator::STOP);
+      }
+    },
     BUTTON_SEAT_UP,
     false,
     period);
 PinInNode buttonSeatDown(
     "button_seat_down",
-    [](bool v) { if (!v) { Seat.set(Actuator::DOWN); } },
+    [](bool v) {
+      if (!v) {
+        Seat.set(Actuator::DOWN);
+      } else {
+        Seat.set(Actuator::STOP);
+      }
+    },
     BUTTON_SEAT_DOWN,
     false,
     period);
