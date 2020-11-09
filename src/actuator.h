@@ -176,7 +176,7 @@ private:
 
   // _to_mqtt is to be called when we need to change the value.
   void _to_mqtt(Actuator::Direction d) {
-    const char * v;
+    const char * v = NULL;
     switch (d) {
     case Actuator::UP:
       v = "up";

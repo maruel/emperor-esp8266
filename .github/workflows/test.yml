@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: "${{matrix.os}}"
     name: "pio run on ${{matrix.os}}"
     steps:
@@ -38,11 +38,21 @@ jobs:
         path: .pio
         key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
         restore-keys: ${{ runner.os }}-pio-
-    - name: "./setup.sh"
+    - name: "./setup.sh (posix)"
+      if: always() && matrix.os != 'windows-latest'
       run: ./setup.sh
+    - name: "setup (windows)"
+      if: always() && matrix.os == 'windows-latest'
+      run: |
+        pip3 install -q -U -r requirements.txt
     # flash_all.sh will fail because it doesn't find a device, so run "pio run"
     # manually.
-    - name: "pio run -s"
+    - name: "pio run -s (posix)"
+      if: always() && matrix.os != 'windows-latest'
       run: |
         source .venv/bin/activate
+        pio run -s
+    - name: "pio run -s (windows)"
+      if: always() && matrix.os == 'windows-latest'
+      run: |
         pio run -s
