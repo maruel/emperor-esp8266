@@ -87,7 +87,7 @@ class Updater(object):
       print('ERROR: MQTT connection failed with result code {}'.format(rc))
       client.disconnect()
     self._subscribe(client, '$state')
-    print('Looking for device: %s'.format(self.device_id))
+    print('Looking for device: {}'.format(self.device_id))
 
   def _on_message(self, client, msg):
     """On a PUBLISH message."""

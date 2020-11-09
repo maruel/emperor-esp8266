@@ -31,12 +31,13 @@ public:
     }
   }
 
-  Actuator(int left, bool idleleft, int right, bool idleright, int delay)
-    : delay_(delay),
+  Actuator(int left, bool idleleft, int right, bool idleright, int delayup, int delaydown)
+    : delayup_(delayup),
+      delaydown_(delaydown),
       left_(left, idleleft),
       right_(right, idleright),
       dir_(STOP),
-      last_(millis()) {
+      stopat_(0) {
   }
 
   Direction get() {
@@ -46,16 +47,28 @@ public:
   // set sets the new direction. Returns the actual direction choosen.
   Direction set(Direction d) {
     if (dir_ == STOP) {
-      if (d == UP) {
-        set_relays(true, false);
+      switch (d) {
+        case STOP:
+          // Do nothing when receiving a STOP while we were in STOP.
+          return d;
+        case UP:
+          _set_relays(true, false);
+          stopat_ = (millis() + delayup_) & 0xFFFFFFFF;
+          break;
+        case DOWN:
+          _set_relays(false, true);
+          stopat_ = (millis() + delaydown_) & 0xFFFFFFFF;
+          break;
       }
-      if (d == DOWN) {
-        set_relays(false, true);
+      if (stopat_ == 0) {
+        stopat_ = 1;
       }
       dir_ = d;
-    } else if (d == STOP && dir_ != STOP) {
-      set_relays(false, false);
+    } else {
+      // On any other confusing message, like repeated UP, stop for safety.
+      _set_relays(false, false);
       dir_ = STOP;
+      stopat_ = 0;
     }
     return dir_;
   }
@@ -63,8 +76,7 @@ public:
   // update updates the actuator state based on time. It shall be called inside
   // loop().
   bool update() {
-    // TODO(maruel): Wrap every 49.7 days.
-    if (dir_ != STOP && delay_ != 0 && (millis() - last_) > delay_) {
+    if (stopat_ != 0 && millis() >= stopat_) {
       set(STOP);
       return true;
     }
@@ -72,17 +84,17 @@ public:
   }
 
 private:
-  void set_relays(bool left, bool right) {
+  void _set_relays(bool left, bool right) {
     left_.set(left);
     right_.set(right);
-    last_ = millis();
   }
 
-  const unsigned long delay_;
+  const unsigned long delayup_;
+  const unsigned long delaydown_;
   PinOut left_;
   PinOut right_;
   Direction dir_;
-  unsigned long last_;
+  unsigned long stopat_;
 
   DISALLOW_COPY_AND_ASSIGN(Actuator);
 };
@@ -97,9 +109,9 @@ private:
 // Each relay output can idle on different values, depending on the GPIO used.
 class ActuatorNode : public HomieNode {
 public:
-  ActuatorNode(const char *name, int left, bool idleleft, int right, bool idleright, int delay)
+  ActuatorNode(const char *name, int left, bool idleleft, int right, bool idleright, int delayup, int delaydown)
       : HomieNode(name, name, "actuator"),
-        actuator_(left, idleleft, right, idleright, delay) {
+        actuator_(left, idleleft, right, idleright, delayup, delaydown) {
     advertise("direction")
         .settable([&](const HomieRange &range, const String &value) {
           return _from_mqtt(value);
