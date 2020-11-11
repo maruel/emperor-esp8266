@@ -48,9 +48,6 @@
 // Enable to start the web server. Uses more memory.
 #define USE_WEB_SERVER 1
 
-// Enable debugging. Preferably use "./do.py --log-serial" instead.
-//#define LOG_SERIAL 1
-
 
 const int BUTTON_SEAT_UP = D8;        // GPIO15; Idles Low
 const int BUTTON_SEAT_DOWN = D0;      // GPIO16; Idles Low with INPUT_PULLDOWN_16 (Pulse to wake up)
@@ -80,7 +77,7 @@ ActuatorNode Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DO
 const int period = 50;
 PinInNode buttonMonitorUp(
     "button_monitor_up",
-    [](bool v) { if (!v) { Monitors.set(Actuator::UP); } },
+    [](bool v) { if (v) { Monitors.set(Actuator::UP); } },
     BUTTON_MONITOR_UP,
     true,
     period);
@@ -93,7 +90,7 @@ PinInNode buttonMonitorDown(
 PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
-      if (!v) {
+      if (v) {
         Seat.set(Actuator::UP);
       } else {
         Seat.set(Actuator::STOP);
@@ -105,7 +102,7 @@ PinInNode buttonSeatUp(
 PinInNode buttonSeatDown(
     "button_seat_down",
     [](bool v) {
-      if (!v) {
+      if (v) {
         Seat.set(Actuator::DOWN);
       } else {
         Seat.set(Actuator::STOP);
@@ -217,6 +214,9 @@ void setup() {
     httpSrv.begin();
   }
 #endif
+
+  // Make sure only one of the actuator runs at a time.
+  Seat.link(Monitors);
 }
 
 // Only run the loop functions at most once per millisecond.

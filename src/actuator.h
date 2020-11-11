@@ -37,7 +37,8 @@ public:
       left_(left, idleleft),
       right_(right, idleright),
       dir_(STOP),
-      stopat_(0) {
+      stopat_(0),
+      linked_(NULL) {
   }
 
   Direction get() {
@@ -83,8 +84,18 @@ public:
     return false;
   }
 
+  // link links the actuator with another one, so that only one of the two can
+  // run at any moment.
+  void link(Actuator &other) {
+    other.linked_ = this;
+    linked_ = &other;
+  }
+
 private:
   void _set_relays(bool left, bool right) {
+    if (linked_ != NULL && left != right) {
+      linked_->set(STOP);
+    }
     left_.set(left);
     right_.set(right);
   }
@@ -95,6 +106,7 @@ private:
   PinOut right_;
   Direction dir_;
   unsigned long stopat_;
+  Actuator* linked_;
 
   DISALLOW_COPY_AND_ASSIGN(Actuator);
 };
@@ -144,6 +156,11 @@ public:
       return true;
     }
     return false;
+  }
+
+  // link links the underlying actuators so only one can run at any moment.
+  void link(ActuatorNode &other) {
+    other.actuator_.link(actuator_);
   }
 
 private:
