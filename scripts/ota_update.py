@@ -229,6 +229,7 @@ def main():
   args = parser.parse_args()
   logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING)
   if not args.no_build:
+    print('Building...')
     cwd = os.path.dirname(THIS_DIR)
     if args.clean_build:
       logging.info('Removing files')
