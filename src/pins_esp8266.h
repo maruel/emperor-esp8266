@@ -7,6 +7,41 @@
 // http://arduino.esp8266.com/Arduino/versions/2.0.0/doc/reference.html
 // https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
 
+// This file uses WeMos pin numbers but they are not special, just defines to
+// the actual GPIO number.
+
+// https://github.com/espressif/esptool/wiki/ESP8266-Boot-Mode-Selection
+// https://wiki.wemos.cc/products:d1:d1_mini#documentation
+//
+// Interfere with boot:
+// - RST -> button
+// - D3 (GPIO0) HIGH normal, LOW flash via UART; 10kOhm Pull Up; On startup 26MHz for 50ms
+// - TX (GPIO1) Out; On startup binary output for 20ms
+// - D4 (GPIO2) Out; Pulled HIGH; Drives on board LED; 10kOhm Pull Up; On startup 600ms low with 20ms of 25kHz
+// - RX (GPIO3) In
+// - D8 (GPIO15) In; LOW normal; HIGH boot to SDIO; 10kOhm Pull Down; On startup 200ms at 0.7V
+// - D0 (GPIO16) In; pulse signal to RST to wake up from wifi; Float; Pull Down with INPUT_PULLDOWN_16
+
+// Left:
+// - TX (GPIO1) Idles High
+// - RX (GPIO3) Idles High
+// - D1 (GPIO5) Idles High
+// - D2 (GPIO4) Idles High
+// - D3 (GPIO0) Idles High
+// - D4 (GPIO2) LED Output
+// - GND
+// - 5V
+
+// Right:
+// - RST button
+// - A0 void
+// - D0 (GPIO16) Idles Float (or Low)
+// - D5 (GPIO14) Idles High
+// - D6 (GPIO12) Idles High
+// - D7 (GPIO13) Idles High
+// - D8 (GPIO15) Idles Low
+// - 3v3
+
 #ifndef PINS_ESP8266_H__
 #define PINS_ESP8266_H__
 #pragma once
