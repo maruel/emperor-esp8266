@@ -191,7 +191,16 @@ public:
     set(0);
   }
 
-  int set(int v);
+  int set(int v) {
+    if (v <= 0) {
+      v = 0;
+    } else if (v >= PWMRANGE) {
+      v = PWMRANGE;
+    }
+    analogWrite(pin, value_);
+    value_ = v;
+    return value_;
+  }
   int get() { return value_; }
 
   const int pin;
@@ -211,7 +220,20 @@ public:
   }
 
   // Use -1 for duration for infinite duration.
-  int set(int freq, int duration);
+  int set(int freq, int duration) {
+    if (freq <= 0) {
+      noTone(pin);
+      freq_ = 0;
+    } else {
+      if (freq >= 10000) {
+        freq = 10000;
+      }
+      tone(pin, freq, duration);
+      freq_ = freq;
+    }
+    return freq_;
+  }
+
   int get() { return freq_; }
 
   const int pin;
