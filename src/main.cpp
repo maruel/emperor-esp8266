@@ -22,6 +22,16 @@
 // - D8 (GPIO15) Idles Low           ; Button Seat Up
 // - 3v3
 
+// Pad layout
+//
+// DIN-8P DS-8-101
+// The official pin order is 61425378 starting top and going clockwise.
+// Order looking at the female connector facing top
+// 4 Blue  Seat Up
+// 6 Green Seat Down
+// 7 Gray  Monitor Up
+// 8 Brown Monitor Down
+// GND Black
 
 #include <Arduino.h>
 #include <Homie.h>
@@ -32,7 +42,11 @@
 
 // Enable to start the web server. Uses more memory.
 #define USE_WEB_SERVER 1
-
+// Do not use the LED for now.
+#define USE_LED 0
+#if defined(LOG_SERIAL)
+#define USE_LED 0
+#endif
 
 const int BUTTON_SEAT_UP = D8;        // GPIO15; Idles Low
 const int BUTTON_SEAT_DOWN = D0;      // GPIO16; Idles Low with INPUT_PULLDOWN_16 (Pulse to wake up)
@@ -52,14 +66,17 @@ const int LED_OUT = D4;               // GPIO2 ; Pull Up; Also onboard LED
 
 
 // Outputs.
-PinOutNode LED("led", LED_OUT, true, NULL);
 ActuatorNode Seat("seat", ACTUATOR_SEAT_UP, true, ACTUATOR_SEAT_DOWN, true, 10000, 10000);
 // The delay will have to be adjusted based on the monitor weight.
 ActuatorNode Monitors("monitors", ACTUATOR_MONITOR_UP, true, ACTUATOR_MONITOR_DOWN, true, 5300, 3900);
-
+#if USE_LED
+PinOutNode LED("led", LED_OUT, true, NULL);
+#endif
 
 // Inputs. All of them idles High, so they are active when Low.
 const int period = 50;
+// We want the monitors buttons to be sticky. We want the monitors to go all the
+// way up or all the way down on press, ignoring when they are released.
 PinInNode buttonMonitorUp(
     "button_monitor_up",
     [](bool v) { if (v) { Monitors.set(Actuator::UP); } },
@@ -72,6 +89,8 @@ PinInNode buttonMonitorDown(
     BUTTON_MONITOR_DOWN,
     true,
     period);
+// We want the seat buttons to only take action while they are pressed. That
+// would not make sense to only go all the way up or down.
 PinInNode buttonSeatUp(
     "button_seat_up",
     [](bool v) {
@@ -82,7 +101,7 @@ PinInNode buttonSeatUp(
       }
     },
     BUTTON_SEAT_UP,
-    false,
+    true,
     period);
 PinInNode buttonSeatDown(
     "button_seat_down",
@@ -94,9 +113,9 @@ PinInNode buttonSeatDown(
       }
     },
     BUTTON_SEAT_DOWN,
-    false,
+    true,
     period);
-#if !defined(LOG_SERIAL)
+#if USE_LED
 // This pin is UART, so it cannot be used when Serial is used.
 PinInNode buttonLED(
     "button_led",
@@ -128,18 +147,18 @@ void onHomieEvent(const HomieEvent& event) {
       break;
     case HomieEventType::MQTT_READY:
       // Broadcast the state of every node.
-      LED.init();
-      Seat.init();
       Monitors.init();
       buttonMonitorUp.init();
       buttonMonitorDown.init();
+      Seat.init();
       buttonSeatUp.init();
       buttonSeatDown.init();
-#if !defined(LOG_SERIAL)
+#if USE_LED
+      LED.init();
       buttonLED.init();
-#endif
       // Reset the actual LEDs.
-      // LED.set(buttonLED.get());
+      LED.set(buttonLED.get());
+#endif
       break;
     default:
       break;
@@ -169,7 +188,6 @@ void setup() {
 
 #if defined(LOG_SERIAL)
   Serial.println();
-  Serial.println("LED button disabled because of logging over serial");
   Serial.println("Version: " GIT_REV);
 #endif
   Homie.onEvent(onHomieEvent);
@@ -213,13 +231,14 @@ void loop() {
     lastLoop = time;
     buttonMonitorUp.update();
     buttonMonitorDown.update();
+    Monitors.update();
     buttonSeatUp.update();
     buttonSeatDown.update();
-#if !defined(LOG_SERIAL)
-    buttonLED.update();
-#endif
-    Monitors.update();
     Seat.update();
+#if USE_LED
+    buttonLED.update();
+    LED.update();
+#endif
     Homie.loop();
   }
 }

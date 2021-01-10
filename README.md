@@ -133,6 +133,17 @@ not powerful enough to do TLS/SSL reliably.
 
 The ESP8266 takes less than a second to boot.
 
+## OTA
+
+Over the air update can be done with:
+
+```
+./scripts/ota_update.py \
+    --device-id emperor-1510 \
+    --host <mqttserver> \
+    --user <mqttuser> \
+    --password <mqttpassword>
+```
 
 ## Debugging
 
