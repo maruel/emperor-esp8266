@@ -10,7 +10,7 @@ cd "$(dirname $0)"
 # Set it to -v for verbosity.
 QUIET=-q
 
-if [ -f .venv/bin/pio ]; then
+if [ -f .venv/bin/esphome ]; then
   exit 0
 fi
 
@@ -43,5 +43,5 @@ pip3 install $QUIET -U -r requirements.txt
 
 echo ""
 echo "Congratulations! Everything is inside ./.venv/"
-echo "To access pio, run:"
+echo "To access esphome, run:"
 echo "  source ./.venv/bin/activate"

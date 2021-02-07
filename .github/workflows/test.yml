@@ -20,7 +20,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: "${{matrix.os}}"
-    name: "pio run on ${{matrix.os}}"
+    name: "esphome run on ${{matrix.os}}"
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
@@ -32,12 +32,12 @@ jobs:
         path: .venv
         key: ${{ runner.os }}-venv-${{ hashFiles('setup.sh', 'requirements.txt') }}
         restore-keys: ${{ runner.os }}-venv-
-    - name: 'Cache: .pio'
+    - name: 'Cache: .esphome'
       uses: actions/cache@v1
       with:
-        path: .pio
-        key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
-        restore-keys: ${{ runner.os }}-pio-
+        path: .esphome
+        key: ${{ runner.os }}-esphome-${{ hashFiles('*.yaml', '*.txt') }}
+        restore-keys: ${{ runner.os }}-esphome-
     - name: "./setup.sh (posix)"
       if: always() && matrix.os != 'windows-latest'
       run: ./setup.sh
@@ -45,14 +45,20 @@ jobs:
       if: always() && matrix.os == 'windows-latest'
       run: |
         pip3 install -q -U -r requirements.txt
-    # flash_all.sh will fail because it doesn't find a device, so run "pio run"
-    # manually.
-    - name: "pio run -s (posix)"
+    - name: "copy secrets (posix)"
+      if: always() && matrix.os != 'windows-latest'
+      run: |
+        cp secrets.yaml.sample secrets.yaml
+    - name: "copy secrets (windows)"
+      if: always() && matrix.os == 'windows-latest'
+      run: |
+        copy secrets.yaml.sample secrets.yaml
+    - name: "esphome compile (posix)"
       if: always() && matrix.os != 'windows-latest'
       run: |
         source .venv/bin/activate
-        pio run -s
-    - name: "pio run -s (windows)"
+        esphome emperor1510.yaml compile
+    - name: "esphome compile (windows)"
       if: always() && matrix.os == 'windows-latest'
       run: |
-        pio run -s
+        esphome emperor1510.yaml compile

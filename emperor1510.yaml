@@ -1,0 +1,233 @@
+# Copyright 2021 Marc-Antoine Ruel. All rights reserved.
+# Use of this source code is governed under the Apache License, Version 2.0
+# that can be found in the LICENSE file.
+
+# Interfere with boot:
+# - RST -> button
+# - D3 (GPIO0) HIGH normal, LOW flash via UART; 10kOhm Pull Up; On startup 26MHz for 50ms
+# - TX (GPIO1) Out; On startup binary output for 20ms
+# - D4 (GPIO2) Out; Pulled HIGH; Drives on board LED; 10kOhm Pull Up; On startup 600ms low with 20ms of 25kHz
+# - RX (GPIO3) In
+# - D8 (GPIO15) In; LOW normal; HIGH boot to SDIO; 10kOhm Pull Down; On startup 200ms at 0.7V; Must not be pulled high during boot.
+# - D0 (GPIO16) In; pulse signal to RST to wake up from wifi; Float; Pull Down with INPUT_PULLDOWN_16
+
+# Left:
+# - TX (GPIO1) Idles High
+# - RX (GPIO3) Idles High
+# - D1 (GPIO5) Idles High
+# - D2 (GPIO4) Idles High
+# - D3 (GPIO0) Idles High
+# - D4 (GPIO2) LED Output
+# - GND
+# - 5V
+
+# Right:
+# - RST button
+# - A0 Analog In
+# - D0 (GPIO16) Idles Float (or Low)
+# - D5 (GPIO14) Idles High
+# - D6 (GPIO12) Idles High
+# - D7 (GPIO13) Idles High
+# - D8 (GPIO15) Idles Low
+# - 3v3
+
+# Pad layout
+#
+# DIN-8P DS-8-101
+# The official pin order is 61425378 starting top and going clockwise.
+# Order looking at the female connector facing top
+# 4 Blue  Seat Up
+# 6 Green Seat Down
+# 7 Gray  Monitor Up
+# 8 Brown Monitor Down
+# GND Black
+
+# Left:
+# - TX (GPIO1) Idles High
+# - RX (GPIO3) Idles High           ; Button LED (Doesn't work when logging is enabled)
+# - D1 (GPIO5) Idles High           ; Button Monitor Up
+# - D2 (GPIO4) Idles High           ; Actuator Monitor Down
+# - D3 (GPIO0) Idles High           ; Button Monitor Down
+# - D4 (GPIO2) LED Output           ; Low when LED on
+# - GND
+# - 5V
+
+# Right:
+# - RST button
+# - A0 Analog In
+# - D0 (GPIO16) Idles Float (or Low); Actuator Seat Down
+# - D5 (GPIO14) Idles High          ; Button Seat Up
+# - D6 (GPIO12) Idles High          ; Button Seat Down
+# - D7 (GPIO13) Idles High          ; Actuator Monitor Up
+# - D8 (GPIO15) Idles Low           ; Actuator Seat Up
+# - 3v3
+
+substitutions:
+  devicename: emperor1510
+  upper_devicename: "Emperor 1510"
+
+
+esphome:
+  name: ${devicename}
+  platform: ESP8266
+  board: d1_mini
+  esp8266_restore_from_flash: True
+  build_path: out/${devicename}
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_pass
+  ap:
+    ssid: "${upper_devicename} is lost"
+    password: !secret wifi_ap_pass
+    ap_timeout: 5min
+
+captive_portal:
+
+logger:
+  level: ERROR
+  baud_rate: 0
+
+api:
+
+ota:
+  password: !secret ota_password
+
+status_led:
+  pin:
+    number: D4
+    inverted: True
+
+sensor:
+  - platform: wifi_signal
+    name: "${upper_devicename} WiFi Signal"
+    id: ${devicename}_wifi_signal
+    update_interval: 600s
+
+
+## Buttons
+
+binary_sensor:
+  - platform: gpio
+    name: "${upper_devicename} Monitor Up"
+    id: ${devicename}_monitor_up
+    pin:
+      number: D1
+      inverted: True
+      mode: INPUT_PULLUP
+    filters:
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - lambda: |
+            if (id(${devicename}_monitor).current_operation == COVER_OPERATION_IDLE) {
+              id(${devicename}_monitor).open();
+            } else {
+              id(${devicename}_monitor).stop();
+            }
+  - platform: gpio
+    name: "${upper_devicename} Monitor Down"
+    id: ${devicename}_monitor_down
+    pin:
+      number: D3
+      inverted: True
+      mode: INPUT_PULLUP
+    filters:
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - lambda: |
+            if (id(${devicename}_monitor).current_operation == COVER_OPERATION_IDLE) {
+              id(${devicename}_monitor).close();
+            } else {
+              id(${devicename}_monitor).stop();
+            }
+  - platform: gpio
+    name: "${upper_devicename} Seat Up"
+    id: ${devicename}_seat_up
+    pin:
+      number: D5
+      inverted: True
+      mode: INPUT_PULLUP
+    filters:
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - cover.open: ${devicename}_seat
+    on_release:
+      then:
+        - cover.stop: ${devicename}_seat
+  - platform: gpio
+    name: "${upper_devicename} Seat Down"
+    id: ${devicename}_seat_down
+    pin:
+      number: D6
+      inverted: True
+      mode: INPUT_PULLUP
+    filters:
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - cover.close: ${devicename}_seat
+    on_release:
+      then:
+        - cover.stop: ${devicename}_seat
+  - platform: status
+    name: "${upper_devicename} Status"
+    id: ${devicename}_status
+
+
+## Actuators
+
+switch:
+- platform: gpio
+  id: monitor_relay_1
+  pin: D2
+  restore_mode: ALWAYS_OFF
+- platform: gpio
+  id: monitor_relay_2
+  pin: D7
+  restore_mode: ALWAYS_OFF
+- platform: gpio
+  id: seat_relay_1
+  pin: D0
+  restore_mode: ALWAYS_OFF
+- platform: gpio
+  id: seat_relay_2
+  pin: D8
+  restore_mode: ALWAYS_OFF
+
+
+cover:
+- platform: time_based
+  name: "${upper_devicename} Monitor"
+  id: ${devicename}_monitor
+  open_action:
+    - cover.stop: ${devicename}_seat
+    - switch.turn_on: monitor_relay_1
+    - switch.turn_off: monitor_relay_2
+  open_duration: 5.3s
+  close_action:
+    - cover.stop: ${devicename}_seat
+    - switch.turn_off: monitor_relay_1
+    - switch.turn_on: monitor_relay_2
+  close_duration: 3.9s
+  stop_action:
+    - switch.turn_off: monitor_relay_1
+    - switch.turn_off: monitor_relay_2
+- platform: time_based
+  name: "${upper_devicename} Seat"
+  id: ${devicename}_seat
+  open_action:
+    - cover.stop: ${devicename}_monitor
+    - switch.turn_on: seat_relay_1
+    - switch.turn_off: seat_relay_2
+  open_duration: 22s
+  close_action:
+    - cover.stop: ${devicename}_monitor
+    - switch.turn_off: seat_relay_1
+    - switch.turn_on: seat_relay_2
+  close_duration: 25s
+  stop_action:
+    - switch.turn_off: seat_relay_1
+    - switch.turn_off: seat_relay_2
