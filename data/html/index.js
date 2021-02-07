@@ -4,20 +4,31 @@
 
 'use strict';
 
+// Valid arguments are:
+// - host
+// - port
+// - device
+// - user
+// - password
+// - useSSL
+// - all
 var client;
 var device;
 
 function getParameterByName(name) {
-  var regex = new RegExp('[?&]' + name.replace(/[\[\]]/g, '\\$&') + '(=([^&#]*)|&|#|$)');
-  var results = regex.exec(window.location.href);
+  let regex = new RegExp('[?&]' + name.replace(/[\[\]]/g, '\\$&') + '(=([^&#]*)|&|#|$)');
+  let results = regex.exec(window.location.href);
   if (!results) return null;
   if (!results[2]) return '';
   return decodeURIComponent(results[2].replace(/\+/g, ' '));
 }
 
 function onLoad() {
-  var host = getParameterByName('host');
-  var port = getParameterByName('port');
+  if (getParameterByName('all')) {
+    document.getElementById('showall').style.display = 'inline-block';
+  }
+  let host = getParameterByName('host');
+  let port = getParameterByName('port');
   device = getParameterByName('device');
   if (!host || !port) {
     document.getElementById('state').innerText = 'Please provide query arguments "host" and "port" to the MQTT server';
@@ -31,11 +42,11 @@ function onLoad() {
 }
 
 function connect() {
-  var user = getParameterByName('user');
-  var opts = {onSuccess: onConnect, onFailure: onFailure};
+  let user = getParameterByName('user');
+  let opts = {onSuccess: onConnect, onFailure: onFailure};
   if (user) {
     opts.userName = user;
-    var password = getParameterByName('password');
+    let password = getParameterByName('password');
     if (password) {
       opts.password = password;
     }
@@ -91,7 +102,7 @@ function sendDevMsg(topic, payload) {
 }
 
 function sendMsg(topic, payload) {
-  var message = new Paho.MQTT.Message(payload);
+  let message = new Paho.MQTT.Message(payload);
   message.destinationName = topic;
   client.send(message);
   console.log('Sent: ' + topic + ': ' + payload);

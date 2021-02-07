@@ -1,4 +1,4 @@
 # pip3 install -r requirements.txt
 attrs>=20.2.0
 paho-mqtt>=1.5.1
-platformio>=5.0.1
+platformio>=5.0.2

@@ -40,6 +40,7 @@ public:
 
   void init() {
     broadcast();
+    broadcastHomeAssistantDiscovery();
   }
 
   // Returns the logical value of the pin.
@@ -63,6 +64,31 @@ private:
     Homie.getLogger() << getId() << ".broadcast(" << value << ")" << endl;
     setProperty("on").send(value);
     onSet_(level);
+  }
+
+  // Register for homeassistant.
+  void broadcastHomeAssistantDiscovery() {
+    String id(HomieInternals::Interface::get().getConfig().get().deviceId);
+    id += "/";
+    id += getId();
+
+    // https://www.home-assistant.io/integrations/binary_sensor.mqtt
+    DynamicJsonDocument doc(512);
+    doc["name"] = getId();
+    String topic("homie/");
+    topic += id;
+    topic += "/on";
+    doc["state_topic"] = topic;
+    doc["payload_on"] = "true";
+    doc["payload_off"] = "false";
+    String raw;
+    serializeJson(doc, raw);
+
+    // Maybe https://www.home-assistant.io/integrations/device_trigger.mqtt/ ?
+    topic = "homeassistant/binary_sensor/";
+    topic += id;
+    topic += "/config";
+    HomieInternals::Interface::get().getMqttClient().publish(topic.c_str(), 1, true, raw.c_str());
   }
 
   void (*const onSet_)(bool v);
@@ -90,6 +116,7 @@ public:
 
   void init() {
     setProperty("on").send("false");
+    broadcastHomeAssistantDiscovery();
   }
 
   // Overiddes the value and broadcast it.
@@ -105,6 +132,34 @@ public:
   }
 
 private:
+  // Register for homeassistant.
+  void broadcastHomeAssistantDiscovery() {
+    String id(HomieInternals::Interface::get().getConfig().get().deviceId);
+    id += "/";
+    id += getId();
+
+    // https://www.home-assistant.io/integrations/switch.mqtt/
+    DynamicJsonDocument doc(512);
+    doc["name"] = getId();
+    String topic("homie/");
+    topic += id;
+    topic += "/set";
+    doc["command_topic"] = topic;
+    topic = "homie/";
+    topic += id;
+    topic += "/on";
+    doc["state_topic"]  = topic;
+    doc["payload_on"] = "true";
+    doc["payload_off"] = "false";
+    String raw;
+    serializeJson(doc, raw);
+
+    topic = "homeassistant/switch/";
+    topic += id;
+    topic += "/config";
+    HomieInternals::Interface::get().getMqttClient().publish(topic.c_str(), 1, true, raw.c_str());
+  }
+
   bool _from_mqtt(const String &value);
 
   void (*const onSet_)(bool v);

@@ -135,6 +135,7 @@ public:
   // init initializes the state, including both the LED and the MQTT topic.
   void init() {
     set(Actuator::STOP);
+    broadcastHomeAssistantDiscovery();
   }
 
   // set is the high level function to set the direction and updates the MQTT
@@ -164,6 +165,31 @@ public:
   }
 
 private:
+  // Register for homeassistant.
+  void broadcastHomeAssistantDiscovery() {
+    String id(HomieInternals::Interface::get().getConfig().get().deviceId);
+    id += "/";
+    id += getId();
+
+    DynamicJsonDocument doc(512);
+    doc["name"] = getId();
+    String topic("homie/");
+    topic += id;
+    topic += "/direction/set";
+    doc["command_topic"] = topic;
+    topic = "homie/";
+    topic += id;
+    topic += "/direction";
+    doc["state_topic"]  = topic;
+    String raw;
+    serializeJson(doc, raw);
+
+    topic = "homeassistant/switch/";
+    topic += id;
+    topic += "/config";
+    HomieInternals::Interface::get().getMqttClient().publish(topic.c_str(), 1, true, raw.c_str());
+  }
+
   // _from_mqtt is called when an incoming MQTT message is received.
   bool _from_mqtt(const String &value) {
     Homie.getLogger() << getId() << "._from_mqtt(" << value << ")" << endl;
