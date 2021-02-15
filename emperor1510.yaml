@@ -117,6 +117,7 @@ binary_sensor:
       mode: INPUT_PULLUP
     filters:
       - delayed_off: 10ms
+      - delayed_on: 10ms
     on_press:
       then:
         - lambda: |
@@ -134,6 +135,7 @@ binary_sensor:
       mode: INPUT_PULLUP
     filters:
       - delayed_off: 10ms
+      - delayed_on: 10ms
     on_press:
       then:
         - lambda: |
@@ -151,6 +153,7 @@ binary_sensor:
       mode: INPUT_PULLUP
     filters:
       - delayed_off: 10ms
+      - delayed_on: 10ms
     on_press:
       then:
         - cover.open: ${devicename}_seat
@@ -166,6 +169,7 @@ binary_sensor:
       mode: INPUT_PULLUP
     filters:
       - delayed_off: 10ms
+      - delayed_on: 10ms
     on_press:
       then:
         - cover.close: ${devicename}_seat
@@ -211,7 +215,7 @@ cover:
     - cover.stop: ${devicename}_seat
     - switch.turn_off: monitor_relay_1
     - switch.turn_on: monitor_relay_2
-  close_duration: 3.9s
+  close_duration: 4s
   stop_action:
     - switch.turn_off: monitor_relay_1
     - switch.turn_off: monitor_relay_2
