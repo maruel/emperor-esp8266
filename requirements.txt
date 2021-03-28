@@ -1,1 +1,1 @@
-esphome>=1.15.3
+esphome>=1.16.0
