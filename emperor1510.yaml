@@ -64,7 +64,7 @@
 
 substitutions:
   devicename: emperor1510
-  upper_devicename: "Emperor 1510"
+  upper_devicename: "Emperor"
 
 
 esphome:
