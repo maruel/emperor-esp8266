@@ -101,7 +101,6 @@ status_led:
 sensor:
   - platform: wifi_signal
     name: "${upper_devicename} WiFi Signal"
-    id: ${devicename}_wifi_signal
     update_interval: 600s
 
 
@@ -110,7 +109,6 @@ sensor:
 binary_sensor:
   - platform: gpio
     name: "${upper_devicename} Monitor Up"
-    id: ${devicename}_monitor_up
     pin:
       number: D1
       inverted: True
@@ -121,14 +119,13 @@ binary_sensor:
     on_press:
       then:
         - lambda: |
-            if (id(${devicename}_monitor).current_operation == COVER_OPERATION_IDLE) {
-              id(${devicename}_monitor).open();
+            if (id(monitor).current_operation == COVER_OPERATION_IDLE) {
+              id(monitor).open();
             } else {
-              id(${devicename}_monitor).stop();
+              id(monitor).stop();
             }
   - platform: gpio
     name: "${upper_devicename} Monitor Down"
-    id: ${devicename}_monitor_down
     pin:
       number: D3
       inverted: True
@@ -139,14 +136,13 @@ binary_sensor:
     on_press:
       then:
         - lambda: |
-            if (id(${devicename}_monitor).current_operation == COVER_OPERATION_IDLE) {
-              id(${devicename}_monitor).close();
+            if (id(monitor).current_operation == COVER_OPERATION_IDLE) {
+              id(monitor).close();
             } else {
-              id(${devicename}_monitor).stop();
+              id(monitor).stop();
             }
   - platform: gpio
     name: "${upper_devicename} Seat Up"
-    id: ${devicename}_seat_up
     pin:
       number: D5
       inverted: True
@@ -156,13 +152,12 @@ binary_sensor:
       - delayed_on: 10ms
     on_press:
       then:
-        - cover.open: ${devicename}_seat
+        - cover.open: seat
     on_release:
       then:
-        - cover.stop: ${devicename}_seat
+        - cover.stop: seat
   - platform: gpio
     name: "${upper_devicename} Seat Down"
-    id: ${devicename}_seat_down
     pin:
       number: D6
       inverted: True
@@ -172,13 +167,12 @@ binary_sensor:
       - delayed_on: 10ms
     on_press:
       then:
-        - cover.close: ${devicename}_seat
+        - cover.close: seat
     on_release:
       then:
-        - cover.stop: ${devicename}_seat
+        - cover.stop: seat
   - platform: status
     name: "${upper_devicename} Status"
-    id: ${devicename}_status
 
 
 ## Actuators
@@ -205,14 +199,14 @@ switch:
 cover:
 - platform: time_based
   name: "${upper_devicename} Monitor"
-  id: ${devicename}_monitor
+  id: monitor
   open_action:
-    - cover.stop: ${devicename}_seat
+    - cover.stop: seat
     - switch.turn_on: monitor_relay_1
     - switch.turn_off: monitor_relay_2
   open_duration: 5.3s
   close_action:
-    - cover.stop: ${devicename}_seat
+    - cover.stop: seat
     - switch.turn_off: monitor_relay_1
     - switch.turn_on: monitor_relay_2
   close_duration: 4s
@@ -221,14 +215,14 @@ cover:
     - switch.turn_off: monitor_relay_2
 - platform: time_based
   name: "${upper_devicename} Seat"
-  id: ${devicename}_seat
+  id: seat
   open_action:
-    - cover.stop: ${devicename}_monitor
+    - cover.stop: monitor
     - switch.turn_on: seat_relay_1
     - switch.turn_off: seat_relay_2
   open_duration: 22s
   close_action:
-    - cover.stop: ${devicename}_monitor
+    - cover.stop: monitor
     - switch.turn_off: seat_relay_1
     - switch.turn_on: seat_relay_2
   close_duration: 25s
