@@ -1,0 +1,10 @@
+# Copyright 2020 Marc-Antoine Ruel.
+
+
+logger:
+  level: ERROR
+  # Disable serial:
+  baud_rate: 0
+
+
+<<: !include wifi.yaml

@@ -74,24 +74,6 @@ esphome:
   esp8266_restore_from_flash: True
   build_path: out/${devicename}
 
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_pass
-  ap:
-    ssid: "${upper_devicename} is lost"
-    password: !secret wifi_ap_pass
-    ap_timeout: 5min
-
-captive_portal:
-
-logger:
-  level: ERROR
-  baud_rate: 0
-
-api:
-
-ota:
-  password: !secret ota_password
 
 status_led:
   pin:
@@ -229,3 +211,6 @@ cover:
   stop_action:
     - switch.turn_off: seat_relay_1
     - switch.turn_off: seat_relay_2
+
+
+<<: !include common/base.yaml

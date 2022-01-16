@@ -1,0 +1,23 @@
+# Copyright 2021 Marc-Antoine Ruel. All rights reserved.
+# Use of this source code is governed under the Apache License, Version 2.0
+# that can be found in the LICENSE file.
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_pass
+  ap:
+    ssid: "${upper_devicename} is lost"
+    password: !secret wifi_ap_pass
+    ap_timeout: 5min
+  # https://esphome.io/components/esphome.html#changing-esphome-node-name
+  # To rename a device, copy the whole wifi block into the node yaml, add the
+  # following in the copied block, flash, remove the block and uncomment here,
+  # flash again.
+  #use_address: <old_name>.local
+
+captive_portal:
+
+api:
+
+ota:
+  password: !secret ota_password

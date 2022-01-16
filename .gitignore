@@ -1,4 +1,4 @@
 /.esphome
 /.venv
 /out
-/secrets.yaml
+/common/secrets.yaml
