@@ -48,17 +48,17 @@ jobs:
     - name: "copy secrets (posix)"
       if: always() && matrix.os != 'windows-latest'
       run: |
-        cp secrets.yaml.sample secrets.yaml
+        cp common/secrets.yaml.sample common/secrets.yaml
     - name: "copy secrets (windows)"
       if: always() && matrix.os == 'windows-latest'
       run: |
-        copy secrets.yaml.sample secrets.yaml
+        copy common/secrets.yaml.sample common/secrets.yaml
     - name: "esphome compile (posix)"
       if: always() && matrix.os != 'windows-latest'
       run: |
         source .venv/bin/activate
-        esphome emperor1510.yaml compile
+        esphome compile emperor1510.yaml
     - name: "esphome compile (windows)"
       if: always() && matrix.os == 'windows-latest'
       run: |
-        esphome emperor1510.yaml compile
+        esphome compile emperor1510.yaml
